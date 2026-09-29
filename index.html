@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111827">
+  <title>Leitor de Chassi V2</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/umd/index.min.js"></script>
+
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f3f4f6;color:#111827}
+    .app{max-width:520px;margin:auto;padding:18px 14px 30px}
+    .top{background:#111827;color:white;border-radius:18px;padding:18px;margin-bottom:14px}
+    .top h1{font-size:22px;margin:0 0 6px}
+    .top p{margin:0;color:#d1d5db;font-size:14px}
+    .card{background:white;border-radius:18px;padding:16px;box-shadow:0 2px 10px rgba(0,0,0,.08);margin-bottom:14px}
+    .step{display:none}.step.active{display:block}
+    label{display:block;font-weight:700;margin:0 0 7px}
+    select,input,button{width:100%;font-size:17px;border-radius:12px;padding:13px;border:1px solid #d1d5db}
+    button{border:0;background:#111827;color:white;font-weight:700;cursor:pointer;margin-top:10px}
+    button.secondary{background:#e5e7eb;color:#111827}
+    button.danger{background:#b91c1c}
+    button:disabled{opacity:.5}
+    .video-wrap{position:relative;background:#000;border-radius:16px;overflow:hidden;aspect-ratio:4/3}
+    video{width:100%;height:100%;object-fit:cover;display:block}
+    .guide{position:absolute;left:12%;right:12%;top:32%;height:36%;border:3px solid #fff;border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.18)}
+    .status{padding:11px;border-radius:12px;background:#f3f4f6;margin-top:10px;font-size:14px}
+    .success{background:#dcfce7;color:#166534}
+    .error{background:#fee2e2;color:#991b1b}
+    .muted{font-size:13px;color:#6b7280;line-height:1.45}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+    .confirm{font-size:16px;line-height:1.7}
+    .confirm b{display:inline-block;min-width:90px}
+    .hidden{display:none!important}
+  </style>
+</head>
+
+<body>
+<div class="app">
+  <div class="top">
+    <h1>📷 Leitor de Chassi</h1>
+    <p>Versão 2 — câmera no navegador + Google Sheets</p>
+  </div>
+
+  <div class="card">
+    <div class="step active" id="step1">
+      <label>1. Leia o código de barras do chassi</label>
+      <div class="video-wrap">
+        <video id="video" playsinline muted></video>
+        <div class="guide"></div>
+      </div>
+      <div id="cameraStatus" class="status">Iniciando câmera...</div>
+      <button id="btnCamera" onclick="startScanner()">📷 Iniciar câmera</button>
+      <div style="height:6px"></div>
+      <input id="manualChassi" placeholder="Ou digite o chassi manualmente">
+      <button class="secondary" onclick="usarManual()">Usar chassi digitado</button>
+      <p class="muted">Dê permissão para a câmera quando o navegador solicitar. Se o código não for lido, use a digitação manual.</p>
+    </div>
+
+    <div class="step" id="step2">
+      <label>2. Modelo do veículo</label>
+      <select id="modelo"></select>
+      <button onclick="proximoModelo()">Continuar</button>
+    </div>
+
+    <div class="step" id="step3">
+      <label>3. Cor do veículo</label>
+      <select id="cor"></select>
+      <button onclick="proximoCor()">Continuar</button>
+      <button class="secondary" onclick="voltar(2)">Voltar</button>
+    </div>
+
+    <div class="step" id="step4">
+      <label>4. Pátio</label>
+      <select id="patio"></select>
+      <button onclick="proximoPatio()">Continuar</button>
+      <button class="secondary" onclick="voltar(3)">Voltar</button>
+    </div>
+
+    <div class="step" id="step5">
+      <label>5. Confirme os dados</label>
+      <div class="confirm">
+        <div><b>Chassi:</b> <span id="cChassi"></span></div>
+        <div><b>Modelo:</b> <span id="cModelo"></span></div>
+        <div><b>Cor:</b> <span id="cCor"></span></div>
+        <div><b>Pátio:</b> <span id="cPatio"></span></div>
+      </div>
+      <button id="btnSalvar" onclick="salvar()">✅ Salvar na planilha</button>
+      <button class="secondary" onclick="voltar(4)">Voltar</button>
+      <div id="saveStatus" class="status hidden"></div>
+    </div>
+
+    <div class="step" id="step6">
+      <div class="status success">
+        <h2 style="margin:0 0 8px">✅ Cadastrado!</h2>
+        <div id="successText"></div>
+      </div>
+      <button onclick="novoVeiculo()">📷 Ler próximo veículo</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // COLE A URL /exec da implantação do seu Apps Script aqui.
+  const API_URL = 'https://script.google.com/macros/s/AKfycbz13cN_mLggJNnx7_9SwXcqRX45kILMkUK7-jMoG1mdCK1euw-1bDgDlCeoeEUEY-bN/exec';
+
+  let scanner = null;
+  let controls = null;
+  let scanning = false;
+
+  const state = {
+    chassi: '',
+    modelo: '',
+    cor: '',
+    patio: ''
+  };
+
+  const config = {
+    modelos: ['Polo','T-Cross','Nivus','Virtus','Taos','Tiguan','Saveiro','Amarok','Outro'],
+    cores: ['Branco','Preto','Prata','Cinza','Vermelho','Azul','Marrom','Verde','Outra'],
+    patios: ['Pátio 01','Pátio 02','Pátio 03','Pátio 04']
+  };
+
+  function $(id){ return document.getElementById(id); }
+
+  function preencherSelect(id, lista){
+    const el = $(id);
+    el.innerHTML = '<option value="">Selecione...</option>' +
+      lista.map(x => '<option value="' + escapeHtml(x) + '">' + escapeHtml(x) + '</option>').join('');
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
+    }[c]));
+  }
+
+  function mostrar(n){
+    document.querySelectorAll('.step').forEach(x => x.classList.remove('active'));
+    $('step' + n).classList.add('active');
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+
+  function normalizeChassi(v){
+    return String(v || '').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  }
+
+  function usarManual(){
+    const v = normalizeChassi($('manualChassi').value);
+    if(v.length < 5){
+      alert('Digite um chassi válido.');
+      return;
+    }
+    state.chassi = v;
+    stopScanner();
+    mostrar(2);
+  }
+
+  function startScanner(){
+    if (!window.ZXingBrowser){
+      $('cameraStatus').className='status error';
+      $('cameraStatus').textContent='Leitor não carregado. Use a digitação manual.';
+      return;
+    }
+
+    stopScanner();
+    scanner = new ZXingBrowser.BrowserMultiFormatReader();
+
+    $('cameraStatus').className='status';
+    $('cameraStatus').textContent='Solicitando acesso à câmera...';
+
+    scanning = true;
+
+    scanner.decodeFromConstraints(
+      {
+        audio:false,
+        video:{
+          facingMode:{ideal:'environment'},
+          width:{ideal:1280},
+          height:{ideal:720}
+        }
+      },
+      $('video'),
+      (result, error, ctl) => {
+        controls = ctl;
+        if(result && scanning){
+          const text = normalizeChassi(result.getText());
+          if(text.length >= 5){
+            state.chassi = text;
+            $('cameraStatus').className='status success';
+            $('cameraStatus').textContent='Chassi lido: ' + text;
+            stopScanner();
+            mostrar(2);
+          }
+        }
+        if(error && scanning){
+          $('cameraStatus').textContent='Aponte a câmera para o código de barras do chassi...';
+        }
+      }
+    ).catch(err => {
+      scanning = false;
+      $('cameraStatus').className='status error';
+      $('cameraStatus').textContent='Não foi possível acessar a câmera. Verifique a permissão do navegador.';
+      console.error(err);
+    });
+  }
+
+  function stopScanner(){
+    scanning = false;
+    try{
+      if(controls && controls.stop) controls.stop();
+    }catch(e){}
+    controls = null;
+    try{
+      const v = $('video');
+      if(v.srcObject){
+        v.srcObject.getTracks().forEach(t => t.stop());
+        v.srcObject = null;
+      }
+    }catch(e){}
+  }
+
+  function proximoModelo(){
+    const v = $('modelo').value;
+    if(!v){ alert('Selecione o modelo.'); return; }
+    state.modelo = v;
+    mostrar(3);
+  }
+
+  function proximoCor(){
+    const v = $('cor').value;
+    if(!v){ alert('Selecione a cor.'); return; }
+    state.cor = v;
+    mostrar(4);
+  }
+
+  function proximoPatio(){
+    const v = $('patio').value;
+    if(!v){ alert('Selecione o pátio.'); return; }
+    state.patio = v;
+
+    $('cChassi').textContent = state.chassi;
+    $('cModelo').textContent = state.modelo;
+    $('cCor').textContent = state.cor;
+    $('cPatio').textContent = state.patio;
+
+    $('saveStatus').className='status hidden';
+    mostrar(5);
+  }
+
+  function voltar(n){ mostrar(n); }
+
+  function salvar(){
+    if(!API_URL || API_URL.includes('COLE_AQUI')){
+      alert('Primeiro coloque a URL /exec do Apps Script no código.');
+      return;
+    }
+
+    $('btnSalvar').disabled = true;
+    $('saveStatus').className='status';
+    $('saveStatus').textContent='Salvando...';
+
+    const callbackName = 'cb_' + Date.now();
+    const params = new URLSearchParams({
+      action:'salvar',
+      callback:callbackName,
+      chassi:state.chassi,
+      modelo:state.modelo,
+      cor:state.cor,
+      patio:state.patio
+    });
+
+    const script = document.createElement('script');
+
+    window[callbackName] = function(result){
+      delete window[callbackName];
+      script.remove();
+      $('btnSalvar').disabled = false;
+
+      if(result && result.ok){
+        $('successText').textContent =
+          'Registro nº ' + result.numero + ' salvo na planilha.';
+        mostrar(6);
+      }else if(result && result.duplicate){
+        $('saveStatus').className='status error';
+        $('saveStatus').textContent='⚠️ ' + result.message;
+      }else{
+        $('saveStatus').className='status error';
+        $('saveStatus').textContent='❌ ' + ((result && result.message) || 'Erro ao salvar.');
+      }
+    };
+
+    script.onerror = function(){
+      delete window[callbackName];
+      script.remove();
+      $('btnSalvar').disabled = false;
+      $('saveStatus').className='status error';
+      $('saveStatus').textContent='❌ Não foi possível comunicar com a planilha. Confira a URL da implantação e a permissão do aplicativo.';
+    };
+
+    script.src = API_URL + '?action=salvar&' + params.toString();
+    document.body.appendChild(script);
+  }
+
+  function novoVeiculo(){
+    state.chassi = state.modelo = state.cor = state.patio = '';
+    $('manualChassi').value = '';
+    $('modelo').value = '';
+    $('cor').value = '';
+    $('patio').value = '';
+    $('cameraStatus').className='status';
+    $('cameraStatus').textContent='Pronto para o próximo veículo.';
+    mostrar(1);
+    startScanner();
+  }
+
+  preencherSelect('modelo', config.modelos);
+  preencherSelect('cor', config.cores);
+  preencherSelect('patio', config.patios);
+
+  // Inicia a câmera somente depois de o usuário tocar no botão.
+  $('cameraStatus').textContent='Toque em "Iniciar câmera" para começar.';
+</script>
+</body>
+</html>
