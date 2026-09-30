@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#111827">
-  <title>Leitor de Chassi V2.1</title>
+  <title>Leitor de Chassi V2.2</title>
 
   <script src="https://unpkg.com/@zxing/browser@0.1.5/umd/zxing-browser.min.js"></script>
 
@@ -41,7 +41,7 @@
 <div class="app">
   <div class="top">
     <h1>📷 Leitor de Chassi</h1>
-    <p>Versão 2.1 — leitor de chassi 1D + Google Sheets</p>
+    <p>Versão 2.2 — leitor 1D + diagnóstico + Google Sheets</p>
   </div>
 
   <div class="card">
@@ -163,31 +163,22 @@
   function startScanner(){
     if (!window.ZXingBrowser){
       $('cameraStatus').className='status error';
-      $('cameraStatus').textContent='Leitor não carregado. Use a digitação manual.';
+      $('cameraStatus').textContent='Leitor ZXing não carregado.';
       return;
     }
 
     stopScanner();
-    lastCandidate = '';
-    candidateHits = 0;
-
-    // Prioriza os formatos 1D mais comuns em etiquetas automotivas.
-    const hints = new Map();
-    if (window.ZXing && ZXing.DecodeHintType && ZXing.BarcodeFormat) {
-      hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
-        ZXing.BarcodeFormat.CODE_128,
-        ZXing.BarcodeFormat.CODE_39,
-        ZXing.BarcodeFormat.CODE_93,
-        ZXing.BarcodeFormat.ITF
-      ]);
-    }
-
-    scanner = new ZXingBrowser.BrowserMultiFormatReader(hints);
-
     $('cameraStatus').className='status';
-    $('cameraStatus').textContent='Solicitando acesso à câmera...';
-
+    $('cameraStatus').textContent='Abrindo câmera traseira...';
     scanning = true;
+
+    try{
+      // Leitor dedicado a códigos de barras 1D.
+      scanner = new ZXingBrowser.BrowserMultiFormatOneDReader();
+    }catch(e){
+      // Fallback caso a distribuição usada não exponha o leitor 1D.
+      scanner = new ZXingBrowser.BrowserMultiFormatReader();
+    }
 
     scanner.decodeFromConstraints(
       {
@@ -195,7 +186,8 @@
         video:{
           facingMode:{ideal:'environment'},
           width:{ideal:1920},
-          height:{ideal:1080}
+          height:{ideal:1080},
+          frameRate:{ideal:30}
         }
       },
       $('video'),
@@ -203,44 +195,37 @@
         controls = ctl;
 
         if(result && scanning){
-          const text = normalizeChassi(result.getText());
+          const raw = String(result.getText ? result.getText() : result.text || '');
+          const text = normalizeChassi(raw);
 
-          // VIN/chassi normalmente possui 17 caracteres alfanuméricos.
-          // I, O e Q não são usados em VINs padronizados.
-          const vinValido = /^[A-HJ-NPR-Z0-9]{17}$/.test(text);
+          let formato = '';
+          try{
+            formato = String(result.getBarcodeFormat ? result.getBarcodeFormat() : '');
+          }catch(e){}
 
-          if(vinValido){
-            // Exige duas leituras iguais consecutivas para reduzir falso positivo.
-            if(text === lastCandidate){
-              candidateHits++;
-            }else{
-              lastCandidate = text;
-              candidateHits = 1;
-            }
+          $('cameraStatus').className='status success';
+          $('cameraStatus').textContent =
+            'Código detectado' + (formato ? ' [' + formato + ']' : '') + ': ' + text;
 
-            $('cameraStatus').className='status';
-            $('cameraStatus').textContent='Código detectado: ' + text + ' — mantenha a câmera firme...';
-
-            if(candidateHits >= 2){
-              state.chassi = text;
-              $('cameraStatus').className='status success';
-              $('cameraStatus').textContent='Chassi lido: ' + text;
-              stopScanner();
-              if(navigator.vibrate) navigator.vibrate(120);
-              setTimeout(() => mostrar(2), 250);
-            }
-          }else{
-            $('cameraStatus').className='status';
-            $('cameraStatus').textContent='Código encontrado, mas não parece ser um chassi de 17 caracteres. Aponte para o código longo do chassi.';
+          // Nesta versão de diagnóstico, qualquer leitura é mostrada.
+          // Só avança automaticamente quando houver exatamente 17 caracteres.
+          if(/^[A-HJ-NPR-Z0-9]{17}$/.test(text)){
+            state.chassi = text;
+            if(navigator.vibrate) navigator.vibrate(120);
+            stopScanner();
+            setTimeout(() => mostrar(2), 450);
           }
-        }else if(error && scanning){
-          $('cameraStatus').textContent='Centralize o código longo na moldura, na horizontal, e mantenha o celular firme...';
+        }else if(scanning){
+          $('cameraStatus').className='status';
+          $('cameraStatus').textContent =
+            'Procurando código 1D... aproxime até as barras ficarem nítidas e mantenha o código na horizontal.';
         }
       }
     ).catch(err => {
       scanning = false;
       $('cameraStatus').className='status error';
-      $('cameraStatus').textContent='Não foi possível acessar a câmera. Verifique a permissão do navegador.';
+      $('cameraStatus').textContent =
+        'Falha ao iniciar o leitor/câmera: ' + (err && err.message ? err.message : err);
       console.error(err);
     });
   }
