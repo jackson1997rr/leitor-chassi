@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#111827">
-  <title>Leitor de Chassi V2</title>
+  <title>Leitor de Chassi V2.1</title>
 
   <script src="https://unpkg.com/@zxing/browser@0.1.5/umd/zxing-browser.min.js"></script>
 
@@ -41,7 +41,7 @@
 <div class="app">
   <div class="top">
     <h1>📷 Leitor de Chassi</h1>
-    <p>Versão 2 — câmera no navegador + Google Sheets</p>
+    <p>Versão 2.1 — leitor de chassi 1D + Google Sheets</p>
   </div>
 
   <div class="card">
@@ -56,7 +56,7 @@
       <div style="height:6px"></div>
       <input id="manualChassi" placeholder="Ou digite o chassi manualmente">
       <button class="secondary" onclick="usarManual()">Usar chassi digitado</button>
-      <p class="muted">Dê permissão para a câmera quando o navegador solicitar. Se o código não for lido, use a digitação manual.</p>
+      <p class="muted">Posicione o código longo do chassi na horizontal, ocupando boa parte da moldura. Mantenha o celular firme por alguns instantes. Se necessário, use a digitação manual.</p>
     </div>
 
     <div class="step" id="step2">
@@ -109,6 +109,8 @@
   let scanner = null;
   let controls = null;
   let scanning = false;
+  let lastCandidate = '';
+  let candidateHits = 0;
 
   const state = {
     chassi: '',
@@ -166,7 +168,21 @@
     }
 
     stopScanner();
-    scanner = new ZXingBrowser.BrowserMultiFormatReader();
+    lastCandidate = '';
+    candidateHits = 0;
+
+    // Prioriza os formatos 1D mais comuns em etiquetas automotivas.
+    const hints = new Map();
+    if (window.ZXing && ZXing.DecodeHintType && ZXing.BarcodeFormat) {
+      hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
+        ZXing.BarcodeFormat.CODE_128,
+        ZXing.BarcodeFormat.CODE_39,
+        ZXing.BarcodeFormat.CODE_93,
+        ZXing.BarcodeFormat.ITF
+      ]);
+    }
+
+    scanner = new ZXingBrowser.BrowserMultiFormatReader(hints);
 
     $('cameraStatus').className='status';
     $('cameraStatus').textContent='Solicitando acesso à câmera...';
@@ -178,25 +194,47 @@
         audio:false,
         video:{
           facingMode:{ideal:'environment'},
-          width:{ideal:1280},
-          height:{ideal:720}
+          width:{ideal:1920},
+          height:{ideal:1080}
         }
       },
       $('video'),
       (result, error, ctl) => {
         controls = ctl;
+
         if(result && scanning){
           const text = normalizeChassi(result.getText());
-          if(text.length >= 5){
-            state.chassi = text;
-            $('cameraStatus').className='status success';
-            $('cameraStatus').textContent='Chassi lido: ' + text;
-            stopScanner();
-            mostrar(2);
+
+          // VIN/chassi normalmente possui 17 caracteres alfanuméricos.
+          // I, O e Q não são usados em VINs padronizados.
+          const vinValido = /^[A-HJ-NPR-Z0-9]{17}$/.test(text);
+
+          if(vinValido){
+            // Exige duas leituras iguais consecutivas para reduzir falso positivo.
+            if(text === lastCandidate){
+              candidateHits++;
+            }else{
+              lastCandidate = text;
+              candidateHits = 1;
+            }
+
+            $('cameraStatus').className='status';
+            $('cameraStatus').textContent='Código detectado: ' + text + ' — mantenha a câmera firme...';
+
+            if(candidateHits >= 2){
+              state.chassi = text;
+              $('cameraStatus').className='status success';
+              $('cameraStatus').textContent='Chassi lido: ' + text;
+              stopScanner();
+              if(navigator.vibrate) navigator.vibrate(120);
+              setTimeout(() => mostrar(2), 250);
+            }
+          }else{
+            $('cameraStatus').className='status';
+            $('cameraStatus').textContent='Código encontrado, mas não parece ser um chassi de 17 caracteres. Aponte para o código longo do chassi.';
           }
-        }
-        if(error && scanning){
-          $('cameraStatus').textContent='Aponte a câmera para o código de barras do chassi...';
+        }else if(error && scanning){
+          $('cameraStatus').textContent='Centralize o código longo na moldura, na horizontal, e mantenha o celular firme...';
         }
       }
     ).catch(err => {
