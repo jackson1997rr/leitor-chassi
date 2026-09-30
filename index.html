@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#111827">
-  <title>Leitor de Chassi V2.2</title>
+  <title>Leitor de Chassi V2.3</title>
 
   <script src="https://unpkg.com/@zxing/browser@0.1.5/umd/zxing-browser.min.js"></script>
 
@@ -41,7 +41,7 @@
 <div class="app">
   <div class="top">
     <h1>📷 Leitor de Chassi</h1>
-    <p>Versão 2.2 — leitor 1D + diagnóstico + Google Sheets</p>
+    <p>Versão 2.3 — captura da foto + leitura do chassi</p>
   </div>
 
   <div class="card">
@@ -53,10 +53,13 @@
       </div>
       <div id="cameraStatus" class="status">Iniciando câmera...</div>
       <button id="btnCamera" onclick="startScanner()">📷 Iniciar câmera</button>
-      <div style="height:6px"></div>
-      <input id="manualChassi" placeholder="Ou digite o chassi manualmente">
-      <button class="secondary" onclick="usarManual()">Usar chassi digitado</button>
-      <p class="muted">Posicione o código longo do chassi na horizontal, ocupando boa parte da moldura. Mantenha o celular firme por alguns instantes. Se necessário, use a digitação manual.</p>
+      <button id="btnCapturar" onclick="capturarELer()">📸 Capturar foto e ler código</button>
+      <canvas id="captureCanvas" class="hidden"></canvas>
+      <div style="height:10px"></div>
+      <label for="manualChassi">Chassi identificado</label>
+      <input id="manualChassi" placeholder="O chassi aparecerá aqui após a leitura">
+      <button class="secondary" onclick="usarManual()">Continuar com este chassi</button>
+      <p class="muted">Posicione o código longo na moldura e toque em "Capturar foto e ler código". O valor identificado aparecerá no campo "Chassi identificado" para conferência.</p>
     </div>
 
     <div class="step" id="step2">
@@ -228,6 +231,87 @@
         'Falha ao iniciar o leitor/câmera: ' + (err && err.message ? err.message : err);
       console.error(err);
     });
+  }
+
+  async function capturarELer(){
+    if(!scanner){
+      $('cameraStatus').className='status error';
+      $('cameraStatus').textContent='Primeiro toque em "Iniciar câmera".';
+      return;
+    }
+
+    const video = $('video');
+    if(!video.videoWidth || !video.videoHeight){
+      $('cameraStatus').className='status error';
+      $('cameraStatus').textContent='A câmera ainda não está pronta. Aguarde um instante e tente novamente.';
+      return;
+    }
+
+    const canvas = $('captureCanvas');
+    const ctx = canvas.getContext('2d', {willReadFrequently:true});
+
+    // Usa a resolução real do quadro da câmera.
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    $('cameraStatus').className='status';
+    $('cameraStatus').textContent='Foto capturada. Tentando ler o código...';
+
+    try{
+      // Tenta primeiro a imagem inteira.
+      let result = await scanner.decodeFromCanvas(canvas);
+      aplicarResultadoCaptura(result);
+      return;
+    }catch(e){}
+
+    try{
+      // Segunda tentativa: recorta a faixa central onde está a moldura.
+      const crop = document.createElement('canvas');
+      const cctx = crop.getContext('2d', {willReadFrequently:true});
+      const sx = Math.round(canvas.width * 0.08);
+      const sy = Math.round(canvas.height * 0.24);
+      const sw = Math.round(canvas.width * 0.84);
+      const sh = Math.round(canvas.height * 0.52);
+      crop.width = sw;
+      crop.height = sh;
+      cctx.drawImage(canvas, sx, sy, sw, sh, 0, 0, sw, sh);
+
+      let result = await scanner.decodeFromCanvas(crop);
+      aplicarResultadoCaptura(result);
+      return;
+    }catch(e){
+      $('cameraStatus').className='status error';
+      $('cameraStatus').textContent='Não consegui identificar o código nessa foto. Aproxime um pouco, deixe as barras nítidas e toque em "Capturar foto e ler código" novamente.';
+    }
+  }
+
+  function aplicarResultadoCaptura(result){
+    const raw = String(result && result.getText ? result.getText() : '');
+    const text = normalizeChassi(raw);
+
+    if(!text){
+      $('cameraStatus').className='status error';
+      $('cameraStatus').textContent='O código foi detectado, mas não retornou conteúdo.';
+      return;
+    }
+
+    $('manualChassi').value = text;
+
+    let formato = '';
+    try{
+      formato = String(result.getBarcodeFormat ? result.getBarcodeFormat() : '');
+    }catch(e){}
+
+    if(/^[A-HJ-NPR-Z0-9]{17}$/.test(text)){
+      state.chassi = text;
+      $('cameraStatus').className='status success';
+      $('cameraStatus').textContent='Chassi identificado' + (formato ? ' [' + formato + ']' : '') + ': ' + text;
+      if(navigator.vibrate) navigator.vibrate(120);
+    }else{
+      $('cameraStatus').className='status';
+      $('cameraStatus').textContent='Código lido' + (formato ? ' [' + formato + ']' : '') + ': ' + text + '. Confira o valor abaixo.';
+    }
   }
 
   function stopScanner(){
