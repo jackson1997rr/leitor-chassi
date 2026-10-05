@@ -244,6 +244,83 @@ button {
 canvas {
   display: none;
 }
+
+/* ===== CADASTRO DO VEÍCULO ===== */
+.cadastro {
+  margin-top: 18px;
+  padding: 18px;
+  background: #1e293b;
+  border-radius: 14px;
+  text-align: left;
+}
+.cadastro h2 {
+  margin: 0 0 6px;
+  text-align: center;
+  font-size: 20px;
+}
+.cadastro .ajuda {
+  margin: 0 0 14px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 13px;
+}
+.campo {
+  margin-top: 12px;
+}
+.campo label {
+  display: block;
+  margin-bottom: 7px;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: bold;
+}
+.campo input,
+.campo select {
+  width: 100%;
+  padding: 13px;
+  border: 1px solid #475569;
+  border-radius: 9px;
+  background: #0f172a;
+  color: white;
+  font-size: 16px;
+}
+.campo input[readonly] {
+  color: #22c55e;
+  font-weight: bold;
+}
+.marca-botoes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.marca-btn {
+  margin-top: 0;
+  background: #334155;
+}
+.marca-btn.ativo {
+  background: #2563eb;
+  outline: 2px solid #60a5fa;
+}
+#btnSalvar {
+  background: #16a34a;
+}
+#btnSalvar:disabled {
+  background: #475569;
+}
+#btnNovo {
+  background: #475569;
+}
+#statusCadastro {
+  margin-top: 14px;
+  min-height: 20px;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.4;
+}
+.status-ok { color: #4ade80; }
+.status-erro { color: #f87171; }
+.status-info { color: #fbbf24; }
+
 </style>
 </head>
 
@@ -369,6 +446,62 @@ canvas {
 </div>
 
 
+
+<div class="cadastro" id="cadastro">
+  <h2>Cadastro do veículo</h2>
+  <div class="ajuda">Após a leitura do código, complete os dados abaixo.</div>
+
+  <div class="campo">
+    <label>CHASSIS / CÓDIGO LIDO</label>
+    <input id="chassiCadastro" type="text" readonly placeholder="Aguardando leitura...">
+  </div>
+
+  <div class="campo">
+    <label>MARCA</label>
+    <div class="marca-botoes">
+      <button type="button" class="marca-btn" data-marca="FIAT">FIAT</button>
+      <button type="button" class="marca-btn" data-marca="JEEP">JEEP</button>
+    </div>
+  </div>
+
+  <div class="campo">
+    <label>MODELO</label>
+    <select id="modeloCadastro" disabled>
+      <option value="">Selecione a marca primeiro</option>
+    </select>
+  </div>
+
+  <div class="campo">
+    <label>VERSÃO</label>
+    <select id="versaoCadastro" disabled>
+      <option value="">Selecione o modelo primeiro</option>
+    </select>
+  </div>
+
+  <div class="campo">
+    <label>COR</label>
+    <select id="corCadastro" disabled>
+      <option value="">Selecione o modelo primeiro</option>
+    </select>
+  </div>
+
+  <div class="campo">
+    <label>LOCALIZAÇÃO</label>
+    <select id="localizacaoCadastro">
+      <option value="">Selecione o pátio</option>
+      <option>Pátio Caminhões</option>
+      <option>Pátio 1</option>
+      <option>Pátio 2</option>
+      <option>Pátio Santa Genoveva</option>
+    </select>
+  </div>
+
+  <button type="button" id="btnSalvar">SALVAR NA PLANILHA</button>
+  <button type="button" id="btnNovo">NOVO VEÍCULO</button>
+  <div id="statusCadastro" class="status-info"></div>
+</div>
+
+
 <canvas id="canvas"></canvas>
 
 </div>
@@ -427,6 +560,222 @@ let intervalo = null;
 let processando = false;
 
 let ultimoCodigo = "";
+
+
+// =====================================
+// CADASTRO / GOOGLE SHEETS
+// =====================================
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx7gLj67JSX1_I0bhOkEzCJKyJlgJei66XEICrQJKd82LrnRx7iXAcXfpoTf7-egYwNSg/exec";
+
+const chassiCadastro = document.getElementById("chassiCadastro");
+const modeloCadastro = document.getElementById("modeloCadastro");
+const versaoCadastro = document.getElementById("versaoCadastro");
+const corCadastro = document.getElementById("corCadastro");
+const localizacaoCadastro = document.getElementById("localizacaoCadastro");
+const btnSalvar = document.getElementById("btnSalvar");
+const btnNovo = document.getElementById("btnNovo");
+const statusCadastro = document.getElementById("statusCadastro");
+const marcaBotoes = Array.from(document.querySelectorAll(".marca-btn"));
+
+let marcaSelecionada = "";
+
+const catalogo = {
+  FIAT: {
+    "MOBI": {
+      versoes: ["LIKE 1.0", "TREKKING 1.0"],
+      cores: ["BRANCO BANCHISA", "PRETO VULCANO", "VERMELHO MONTECARLO", "CINZA SILVERSTONE"]
+    },
+    "ARGO": {
+      versoes: ["DRIVE 1.0 MT", "DRIVE 1.3 AT", "TREKKING 1.3 MT", "TREKKING 1.3 AT"],
+      cores: ["BRANCO BANCHISA", "PRETO VULCANO", "VERMELHO MONTECARLO", "CINZA SILVERSTONE", "PRATA BARI"]
+    },
+    "CRONOS": {
+      versoes: ["DRIVE 1.0", "DRIVE 1.3", "DRIVE 1.3 AT", "PRECISION 1.3 AT"],
+      cores: ["BRANCO BANCHISA", "PRETO VULCANO", "CINZA SILVERSTONE", "PRATA BARI"]
+    },
+    "PULSE": {
+      versoes: ["DRIVE 1.3 MT", "DRIVE 1.3 AT", "AUDACE T200 MHEV AT"],
+      cores: ["BRANCO BANCHISA", "PRETO VULCANO", "VERMELHO MONTECARLO", "CINZA SILVERSTONE", "CINZA STRATO"]
+    },
+    "FASTBACK": {
+      versoes: ["TURBO 200 AT", "SMART DRIVE TURBO 200 AT", "AUDACE TURBO 200 MHEV AT", "IMPETUS TURBO 200 MHEV AT"],
+      cores: ["BRANCO BANCHISA", "PRETO VULCANO", "VERMELHO MONTECARLO", "CINZA SILVERSTONE", "CINZA STRATO"]
+    },
+    "STRADA": {
+      versoes: ["ENDURANCE CABINE PLUS", "FREEDOM CABINE PLUS", "FREEDOM CABINE DUPLA", "VOLCANO CABINE DUPLA", "VOLCANO CABINE DUPLA AT", "ULTRA CABINE DUPLA", "RANCH CABINE DUPLA"],
+      cores: ["BRANCO BANCHISA", "PRETO VULCANO", "VERMELHO MONTECARLO", "CINZA SILVERSTONE", "PRATA BARI"]
+    },
+    "TORO": {
+      versoes: ["ENDURANCE T270", "FREEDOM T270", "VOLCANO T270 MHEV", "ULTRA T270 MHEV", "VOLCANO TURBODIESEL 4X4", "RANCH TURBODIESEL 4X4"],
+      cores: ["BRANCO AMBIENTE", "PRETO CARBON", "VERMELHO COLORADO", "GRANITE CRYSTAL", "PRATA BILLET"]
+    },
+    "TITANO": {
+      versoes: ["ENDURANCE", "VOLCANO", "RANCH"],
+      cores: ["BRANCO", "PRETO", "CINZA", "PRATA"]
+    },
+    "FIORINO": {
+      versoes: ["ENDURANCE 1.3"],
+      cores: ["BRANCO BANCHISA", "PRATA"]
+    },
+    "DUCATO": {
+      versoes: ["CARGO", "MAXICARGO", "MULTI"],
+      cores: ["BRANCO"]
+    },
+    "500E": {
+      versoes: ["ICON"],
+      cores: ["BRANCO", "PRETO", "CINZA"]
+    }
+  },
+  JEEP: {
+    "AVENGER": {
+      versoes: ["ALTITUDE T200 MHEV", "LONGITUDE T200 MHEV", "LIMITED T200 MHEV"],
+      cores: ["PRETO CARBON", "BRANCO SNOW", "VERMELHO SUNSET", "CINZA GRANITE", "CINZA CONCRETE"]
+    },
+    "RENEGADE": {
+      versoes: ["ALTITUDE T270 4X2", "LONGITUDE T270 MHEV 4X2", "SAHARA T270 MHEV 4X2", "WILLYS T270 4X4"],
+      cores: ["BRANCO POLAR", "PRETO CARBON", "CINZA GRANITE", "STING GRAY BICOLOR", "AZUL JAZZ", "VERDE RECON COM TETO PRETO"]
+    },
+    "COMPASS": {
+      versoes: ["SPORT T270", "LONGITUDE T270", "SÉRIE S T270", "BLACKHAWK HURRICANE"],
+      cores: ["BRANCO POLAR", "PRETO CARBON", "CINZA GRANITE", "PRATA BILLET", "AZUL JAZZ", "VERMELHO SUNSET"]
+    },
+    "COMMANDER": {
+      versoes: ["LONGITUDE T270", "LIMITED T270 MHEV", "OVERLAND T270 MHEV", "OVERLAND 2.2 TURBODIESEL 4X4", "BLACKHAWK HURRICANE 4X4"],
+      cores: ["BRANCO POLAR", "PRETO CARBON", "CINZA GRANITE", "PRATA BILLET", "AZUL JAZZ"]
+    },
+    "WRANGLER": {
+      versoes: ["SAHARA", "RUBICON"],
+      cores: ["BRANCO", "PRETO", "CINZA", "VERMELHO"]
+    },
+    "GLADIATOR": {
+      versoes: ["RUBICON"],
+      cores: ["BRANCO", "PRETO", "CINZA", "VERMELHO"]
+    }
+  }
+};
+
+function preencherSelect(select, itens, placeholder) {
+  select.innerHTML = "";
+  const inicial = document.createElement("option");
+  inicial.value = "";
+  inicial.textContent = placeholder;
+  select.appendChild(inicial);
+
+  itens.forEach(item => {
+    const option = document.createElement("option");
+    option.value = item;
+    option.textContent = item;
+    select.appendChild(option);
+  });
+
+  select.disabled = itens.length === 0;
+}
+
+marcaBotoes.forEach(botao => {
+  botao.addEventListener("click", function() {
+    marcaSelecionada = this.dataset.marca;
+
+    marcaBotoes.forEach(b => b.classList.remove("ativo"));
+    this.classList.add("ativo");
+
+    const modelos = Object.keys(catalogo[marcaSelecionada] || {});
+    preencherSelect(modeloCadastro, modelos, "Selecione o modelo");
+    preencherSelect(versaoCadastro, [], "Selecione o modelo primeiro");
+    preencherSelect(corCadastro, [], "Selecione o modelo primeiro");
+    statusCadastro.textContent = "";
+  });
+});
+
+modeloCadastro.addEventListener("change", function() {
+  const dadosModelo = catalogo[marcaSelecionada]?.[this.value];
+
+  if (!dadosModelo) {
+    preencherSelect(versaoCadastro, [], "Selecione o modelo primeiro");
+    preencherSelect(corCadastro, [], "Selecione o modelo primeiro");
+    return;
+  }
+
+  preencherSelect(versaoCadastro, dadosModelo.versoes, "Selecione a versão");
+  preencherSelect(corCadastro, dadosModelo.cores, "Selecione a cor");
+});
+
+function prepararNovoCadastro() {
+  chassiCadastro.value = "";
+  marcaSelecionada = "";
+  marcaBotoes.forEach(b => b.classList.remove("ativo"));
+  preencherSelect(modeloCadastro, [], "Selecione a marca primeiro");
+  preencherSelect(versaoCadastro, [], "Selecione o modelo primeiro");
+  preencherSelect(corCadastro, [], "Selecione o modelo primeiro");
+  localizacaoCadastro.value = "";
+  statusCadastro.textContent = "";
+  statusCadastro.className = "status-info";
+  ultimoCodigo = "";
+  codigo.innerText = "Procurando código...";
+  formato.innerText = "";
+}
+
+btnNovo.addEventListener("click", prepararNovoCadastro);
+
+btnSalvar.addEventListener("click", async function() {
+  const dados = {
+    marca: marcaSelecionada,
+    chassi: chassiCadastro.value.trim(),
+    modelo: modeloCadastro.value,
+    versao: versaoCadastro.value,
+    cor: corCadastro.value,
+    localizacao: localizacaoCadastro.value
+  };
+
+  if (!dados.chassi || !dados.marca || !dados.modelo || !dados.versao || !dados.cor || !dados.localizacao) {
+    statusCadastro.textContent = "Complete todos os campos antes de salvar.";
+    statusCadastro.className = "status-erro";
+    return;
+  }
+
+  btnSalvar.disabled = true;
+  btnSalvar.textContent = "SALVANDO...";
+  statusCadastro.textContent = "Enviando dados para a planilha...";
+  statusCadastro.className = "status-info";
+
+  try {
+    // text/plain evita preflight CORS no Apps Script.
+    const resposta = await fetch(WEB_APP_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(dados),
+      redirect: "follow"
+    });
+
+    const texto = await resposta.text();
+    let resultado;
+
+    try {
+      resultado = JSON.parse(texto);
+    } catch (_) {
+      throw new Error("O Apps Script não retornou uma resposta JSON válida.");
+    }
+
+    if (!resultado.sucesso) {
+      throw new Error(resultado.mensagem || "Não foi possível cadastrar o veículo.");
+    }
+
+    statusCadastro.textContent = resultado.mensagem || "Veículo cadastrado com sucesso!";
+    statusCadastro.className = "status-ok";
+
+    if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
+
+    setTimeout(prepararNovoCadastro, 1800);
+
+  } catch (erro) {
+    console.error(erro);
+    statusCadastro.textContent = "Erro ao salvar: " + erro.message;
+    statusCadastro.className = "status-erro";
+  } finally {
+    btnSalvar.disabled = false;
+    btnSalvar.textContent = "SALVAR NA PLANILHA";
+  }
+});
+
 
 
 // =====================================
@@ -1102,6 +1451,11 @@ function mostrarResultado(
 
   codigo.innerText =
     valor;
+
+  // Envia automaticamente o código lido para o formulário de cadastro.
+  if (chassiCadastro) {
+    chassiCadastro.value = String(valor).trim().toUpperCase();
+  }
 
 
   formato.innerText =
