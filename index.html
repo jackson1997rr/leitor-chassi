@@ -11,7 +11,8 @@
 
   <title>Leitor de Código de Barras</title>
 
-  <script src="https://unpkg.com/@zxing/library@latest"></script>
+  <!-- Versão fixa do ZXing -->
+  <script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"></script>
 
   <style>
     * {
@@ -35,17 +36,19 @@
 
     h1 {
       font-size: 25px;
-      margin-bottom: 5px;
+      margin: 15px 0 5px;
     }
 
     .status {
       color: #cbd5e1;
       margin-bottom: 20px;
+      font-size: 16px;
     }
 
     .camera-box {
       position: relative;
       width: 100%;
+      min-height: 300px;
       overflow: hidden;
       border-radius: 15px;
       background: black;
@@ -54,8 +57,8 @@
 
     video {
       width: 100%;
-      display: block;
       min-height: 300px;
+      display: block;
       object-fit: cover;
     }
 
@@ -67,12 +70,13 @@
       height: 3px;
       background: #ef4444;
       box-shadow: 0 0 10px #ef4444;
+      pointer-events: none;
     }
 
     .instrucao {
-      margin-top: 12px;
+      margin-top: 15px;
       color: #cbd5e1;
-      font-size: 14px;
+      font-size: 15px;
     }
 
     button {
@@ -94,7 +98,7 @@
 
     .resultado {
       margin-top: 20px;
-      padding: 20px;
+      padding: 22px;
       background: #1f2937;
       border-radius: 12px;
     }
@@ -104,7 +108,7 @@
     }
 
     #codigo {
-      margin-top: 8px;
+      margin-top: 10px;
       font-size: 22px;
       font-weight: bold;
       word-break: break-all;
@@ -112,8 +116,10 @@
     }
 
     #mensagem {
-      margin-top: 15px;
-      font-size: 14px;
+      margin-top: 18px;
+      padding-bottom: 20px;
+      font-size: 15px;
+      line-height: 1.4;
       color: #fbbf24;
     }
   </style>
@@ -131,9 +137,11 @@
 
   <div class="camera-box">
 
-    <video id="video"
-           autoplay
-           playsinline>
+    <video
+      id="video"
+      autoplay
+      muted
+      playsinline>
     </video>
 
     <div class="linha"></div>
@@ -158,7 +166,9 @@
 
   </div>
 
-  <div id="mensagem"></div>
+  <div id="mensagem">
+    Toque em ABRIR CÂMERA para começar.
+  </div>
 
 </div>
 
@@ -171,25 +181,29 @@ const mensagem = document.getElementById("mensagem");
 const btnCamera = document.getElementById("btnCamera");
 
 let leitor = null;
-let lendo = false;
+let cameraAtiva = false;
+let ultimoCodigo = "";
 
 
-// ------------------------------------
-// ABRIR CÂMERA
-// ------------------------------------
+// ------------------------------------------
+// BOTÃO
+// ------------------------------------------
 
 btnCamera.addEventListener("click", iniciarLeitor);
 
 
+// ------------------------------------------
+// INICIAR LEITOR
+// ------------------------------------------
+
 async function iniciarLeitor() {
 
-  if (lendo) {
+  if (cameraAtiva) {
     return;
   }
 
-  lendo = true;
-
-  btnCamera.innerText = "INICIANDO CÂMERA...";
+  btnCamera.disabled = true;
+  btnCamera.innerText = "ABRINDO CÂMERA...";
 
   codigo.innerText = "Procurando código...";
 
@@ -198,7 +212,10 @@ async function iniciarLeitor() {
 
   try {
 
-    // Configuração para priorizar CODE 128
+    // --------------------------------------
+    // CONFIGURAÇÃO DOS CÓDIGOS
+    // --------------------------------------
+
     const hints = new Map();
 
     const formatos = [
@@ -224,99 +241,104 @@ async function iniciarLeitor() {
     );
 
 
+    // --------------------------------------
+    // CRIAR LEITOR
+    // --------------------------------------
+
     leitor =
       new ZXing.BrowserMultiFormatReader(hints);
 
 
-    // Procurar câmeras disponíveis
-    const cameras =
-      await ZXing.BrowserCodeReader.listVideoInputDevices();
+    // --------------------------------------
+    // PEDIR CÂMERA TRASEIRA
+    // --------------------------------------
+
+    const constraints = {
+
+      video: {
+
+        facingMode: {
+          ideal: "environment"
+        },
+
+        width: {
+          ideal: 1920
+        },
+
+        height: {
+          ideal: 1080
+        }
+
+      }
+
+    };
 
 
-    if (!cameras || cameras.length === 0) {
+    // --------------------------------------
+    // INICIAR LEITURA
+    // --------------------------------------
 
-      throw new Error(
-        "Nenhuma câmera encontrada."
-      );
+    await leitor.decodeFromConstraints(
 
-    }
+      constraints,
 
-
-    // Normalmente a última câmera é a traseira
-    let cameraSelecionada =
-      cameras[cameras.length - 1];
-
-
-    // Tentar encontrar explicitamente câmera traseira
-    const traseira = cameras.find(camera => {
-
-      const nome =
-        (camera.label || "").toLowerCase();
-
-      return (
-        nome.includes("back") ||
-        nome.includes("rear") ||
-        nome.includes("traseira") ||
-        nome.includes("environment")
-      );
-
-    });
-
-
-    if (traseira) {
-      cameraSelecionada = traseira;
-    }
-
-
-    mensagem.innerText =
-      "Câmera aberta. Procurando código de barras...";
-
-    btnCamera.innerText =
-      "CÂMERA ATIVA";
-
-
-    // ------------------------------------
-    // LEITURA CONTÍNUA
-    // ------------------------------------
-
-    leitor.decodeFromVideoDevice(
-      cameraSelecionada.deviceId,
       video,
+
       (resultado, erro) => {
 
         if (resultado) {
 
-          const texto =
-            resultado.getText();
+          const texto = resultado.getText();
 
-          codigo.innerText = texto;
+          if (texto && texto !== ultimoCodigo) {
 
-          mensagem.innerText =
-            "Código identificado com sucesso!";
+            ultimoCodigo = texto;
 
-          // Vibração curta
-          if (navigator.vibrate) {
-            navigator.vibrate(150);
+            codigo.innerText = texto;
+
+            mensagem.innerText =
+              "Código identificado com sucesso!";
+
+            if (navigator.vibrate) {
+              navigator.vibrate(200);
+            }
+
           }
 
         }
 
-        if (erro &&
-            !(erro instanceof ZXing.NotFoundException)) {
+        if (erro) {
 
-          console.log(erro);
+          // NotFoundException é normal.
+          // Significa apenas que naquele quadro
+          // ainda não encontrou código.
+
+          if (!(erro instanceof ZXing.NotFoundException)) {
+            console.log(erro);
+          }
 
         }
 
       }
+
     );
+
+
+    cameraAtiva = true;
+
+    btnCamera.innerText = "CÂMERA ATIVA";
+
+    mensagem.innerText =
+      "Câmera aberta. Procurando código de barras...";
 
 
   } catch (erro) {
 
     console.error(erro);
 
-    lendo = false;
+    cameraAtiva = false;
+
+    btnCamera.disabled = false;
 
     btnCamera.innerText =
       "TENTAR NOVAMENTE";
