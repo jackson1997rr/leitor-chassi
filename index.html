@@ -1,129 +1,197 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
+<meta charset="UTF-8">
 
-  <meta name="viewport"
-        content="width=device-width,
-        initial-scale=1.0,
-        maximum-scale=1.0,
-        user-scalable=no">
+<meta name="viewport"
+      content="width=device-width,
+      initial-scale=1.0,
+      maximum-scale=1.0,
+      user-scalable=no">
 
-  <title>Leitor de Código de Barras</title>
+<title>Leitor de Código de Barras</title>
 
-  <!-- Versão fixa do ZXing -->
-  <script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"></script>
+<script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"></script>
 
-  <style>
-    * {
-      box-sizing: border-box;
-    }
+<style>
 
-    body {
-      margin: 0;
-      padding: 20px;
-      background: #111827;
-      color: white;
-      font-family: Arial, sans-serif;
-      text-align: center;
-    }
+* {
+  box-sizing: border-box;
+}
 
-    .container {
-      width: 100%;
-      max-width: 600px;
-      margin: auto;
-    }
+body {
+  margin: 0;
+  background: #0f172a;
+  color: white;
+  font-family: Arial, sans-serif;
+  text-align: center;
+}
 
-    h1 {
-      font-size: 25px;
-      margin: 15px 0 5px;
-    }
+.container {
+  width: 100%;
+  max-width: 650px;
+  margin: auto;
+  padding: 18px;
+}
 
-    .status {
-      color: #cbd5e1;
-      margin-bottom: 20px;
-      font-size: 16px;
-    }
+h1 {
+  font-size: 25px;
+  margin: 12px 0 5px;
+}
 
-    .camera-box {
-      position: relative;
-      width: 100%;
-      min-height: 300px;
-      overflow: hidden;
-      border-radius: 15px;
-      background: black;
-      border: 2px solid #374151;
-    }
+.subtitulo {
+  color: #cbd5e1;
+  margin-bottom: 18px;
+}
 
-    video {
-      width: 100%;
-      min-height: 300px;
-      display: block;
-      object-fit: cover;
-    }
+.camera-box {
+  position: relative;
+  width: 100%;
+  height: 380px;
+  background: black;
+  border: 2px solid #334155;
+  border-radius: 16px;
+  overflow: hidden;
+}
 
-    .linha {
-      position: absolute;
-      left: 5%;
-      right: 5%;
-      top: 50%;
-      height: 3px;
-      background: #ef4444;
-      box-shadow: 0 0 10px #ef4444;
-      pointer-events: none;
-    }
+#video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 
-    .instrucao {
-      margin-top: 15px;
-      color: #cbd5e1;
-      font-size: 15px;
-    }
+/* Área onde queremos posicionar o código */
 
-    button {
-      width: 100%;
-      margin-top: 18px;
-      padding: 16px;
-      border: none;
-      border-radius: 10px;
-      background: #2563eb;
-      color: white;
-      font-size: 17px;
-      font-weight: bold;
-      cursor: pointer;
-    }
+.mira {
+  position: absolute;
+  left: 5%;
+  right: 5%;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 145px;
 
-    button:active {
-      transform: scale(0.98);
-    }
+  border: 3px solid #f59e0b;
+  border-radius: 8px;
 
-    .resultado {
-      margin-top: 20px;
-      padding: 22px;
-      background: #1f2937;
-      border-radius: 12px;
-    }
+  box-shadow:
+    0 0 0 9999px rgba(0,0,0,0.30);
 
-    .resultado small {
-      color: #9ca3af;
-    }
+  pointer-events: none;
+}
 
-    #codigo {
-      margin-top: 10px;
-      font-size: 22px;
-      font-weight: bold;
-      word-break: break-all;
-      color: #22c55e;
-    }
+.linha {
+  position: absolute;
 
-    #mensagem {
-      margin-top: 18px;
-      padding-bottom: 20px;
-      font-size: 15px;
-      line-height: 1.4;
-      color: #fbbf24;
-    }
-  </style>
+  left: 3%;
+  right: 3%;
+
+  top: 50%;
+
+  height: 3px;
+
+  background: #ef4444;
+
+  box-shadow:
+    0 0 10px #ef4444;
+}
+
+.instrucao {
+  margin-top: 13px;
+  color: #cbd5e1;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+button {
+  width: 100%;
+  border: 0;
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 14px;
+
+  color: white;
+
+  font-size: 17px;
+  font-weight: bold;
+
+  cursor: pointer;
+}
+
+#btnCamera {
+  background: #2563eb;
+}
+
+#btnCapturar {
+  background: #059669;
+}
+
+#btnCapturar:disabled {
+  background: #475569;
+  opacity: 0.7;
+}
+
+#btnLanterna {
+  background: #d97706;
+}
+
+#btnLanterna:disabled {
+  background: #475569;
+  opacity: 0.7;
+}
+
+.resultado {
+  margin-top: 18px;
+
+  padding: 20px;
+
+  background: #1e293b;
+
+  border-radius: 14px;
+}
+
+.rotulo {
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+#codigo {
+  margin-top: 8px;
+
+  color: #22c55e;
+
+  font-size: 24px;
+  font-weight: bold;
+
+  word-break: break-all;
+}
+
+#formato {
+  margin-top: 8px;
+
+  color: #38bdf8;
+
+  font-size: 14px;
+}
+
+#mensagem {
+  margin-top: 15px;
+
+  color: #fbbf24;
+
+  line-height: 1.4;
+
+  font-size: 14px;
+}
+
+/* Canvas usado para captura */
+
+#canvas {
+  display: none;
+}
+
+</style>
 </head>
+
 
 <body>
 
@@ -131,9 +199,10 @@
 
   <h1>Leitor de Código de Barras</h1>
 
-  <div class="status">
-    Aponte a câmera para o código do chassi
+  <div class="subtitulo">
+    Centralize o código dentro da área amarela
   </div>
+
 
   <div class="camera-box">
 
@@ -144,114 +213,242 @@
       playsinline>
     </video>
 
-    <div class="linha"></div>
+    <div class="mira">
+
+      <div class="linha"></div>
+
+    </div>
 
   </div>
+
 
   <div class="instrucao">
-    Posicione o código de barras atravessando a linha vermelha.
+    Mantenha todas as barras dentro do retângulo amarelo.
+    A leitura automática ficará funcionando continuamente.
   </div>
+
 
   <button id="btnCamera">
     ABRIR CÂMERA
   </button>
 
+
+  <button id="btnCapturar" disabled>
+    CAPTURAR E LER
+  </button>
+
+
+  <button id="btnLanterna" disabled>
+    LIGAR LANTERNA
+  </button>
+
+
   <div class="resultado">
 
-    <small>CÓDIGO LIDO</small>
-
-    <div id="codigo">
-      Aguardando leitura...
+    <div class="rotulo">
+      CÓDIGO LIDO
     </div>
 
+    <div id="codigo">
+      Aguardando...
+    </div>
+
+    <div id="formato"></div>
+
   </div>
 
+
   <div id="mensagem">
-    Toque em ABRIR CÂMERA para começar.
+    Abra a câmera para começar.
   </div>
+
+
+  <canvas id="canvas"></canvas>
 
 </div>
 
 
 <script>
 
-const video = document.getElementById("video");
-const codigo = document.getElementById("codigo");
-const mensagem = document.getElementById("mensagem");
-const btnCamera = document.getElementById("btnCamera");
+const video =
+  document.getElementById("video");
+
+const canvas =
+  document.getElementById("canvas");
+
+const codigo =
+  document.getElementById("codigo");
+
+const formato =
+  document.getElementById("formato");
+
+const mensagem =
+  document.getElementById("mensagem");
+
+const btnCamera =
+  document.getElementById("btnCamera");
+
+const btnCapturar =
+  document.getElementById("btnCapturar");
+
+const btnLanterna =
+  document.getElementById("btnLanterna");
+
 
 let leitor = null;
-let cameraAtiva = false;
+
+let streamAtual = null;
+
+let trackVideo = null;
+
+let lanternaLigada = false;
+
 let ultimoCodigo = "";
 
 
-// ------------------------------------------
-// BOTÃO
-// ------------------------------------------
+// ========================================
+// CONFIGURAÇÃO DO ZXING
+// ========================================
 
-btnCamera.addEventListener("click", iniciarLeitor);
+function criarLeitor() {
+
+  const hints = new Map();
+
+  const formatos = [
+
+    ZXing.BarcodeFormat.EAN_13,
+
+    ZXing.BarcodeFormat.CODE_128,
+
+    ZXing.BarcodeFormat.CODE_39,
+
+    ZXing.BarcodeFormat.CODE_93,
+
+    ZXing.BarcodeFormat.ITF,
+
+    ZXing.BarcodeFormat.CODABAR,
+
+    ZXing.BarcodeFormat.EAN_8,
+
+    ZXing.BarcodeFormat.UPC_A,
+
+    ZXing.BarcodeFormat.UPC_E
+
+  ];
 
 
-// ------------------------------------------
-// INICIAR LEITOR
-// ------------------------------------------
+  hints.set(
+    ZXing.DecodeHintType.POSSIBLE_FORMATS,
+    formatos
+  );
 
-async function iniciarLeitor() {
 
-  if (cameraAtiva) {
+  hints.set(
+    ZXing.DecodeHintType.TRY_HARDER,
+    true
+  );
+
+
+  return new ZXing.BrowserMultiFormatReader(hints);
+
+}
+
+
+// ========================================
+// MOSTRAR RESULTADO
+// ========================================
+
+function mostrarResultado(resultado) {
+
+  if (!resultado) {
     return;
   }
 
-  btnCamera.disabled = true;
-  btnCamera.innerText = "ABRINDO CÂMERA...";
 
-  codigo.innerText = "Procurando código...";
+  const texto =
+    resultado.getText();
 
-  mensagem.innerText =
-    "Permita o acesso à câmera quando o navegador solicitar.";
+
+  if (!texto) {
+    return;
+  }
+
+
+  codigo.innerText =
+    texto;
+
 
   try {
 
-    // --------------------------------------
-    // CONFIGURAÇÃO DOS CÓDIGOS
-    // --------------------------------------
+    formato.innerText =
+      "Formato: " +
+      resultado.getBarcodeFormat();
 
-    const hints = new Map();
+  } catch (e) {
 
-    const formatos = [
-      ZXing.BarcodeFormat.CODE_128,
-      ZXing.BarcodeFormat.CODE_39,
-      ZXing.BarcodeFormat.CODE_93,
-      ZXing.BarcodeFormat.CODABAR,
-      ZXing.BarcodeFormat.ITF,
-      ZXing.BarcodeFormat.EAN_13,
-      ZXing.BarcodeFormat.EAN_8,
-      ZXing.BarcodeFormat.UPC_A,
-      ZXing.BarcodeFormat.UPC_E
-    ];
+    formato.innerText =
+      "Código identificado";
 
-    hints.set(
-      ZXing.DecodeHintType.POSSIBLE_FORMATS,
-      formatos
-    );
-
-    hints.set(
-      ZXing.DecodeHintType.TRY_HARDER,
-      true
-    );
+  }
 
 
-    // --------------------------------------
-    // CRIAR LEITOR
-    // --------------------------------------
-
-    leitor =
-      new ZXing.BrowserMultiFormatReader(hints);
+  mensagem.innerText =
+    "Código identificado com sucesso!";
 
 
-    // --------------------------------------
-    // PEDIR CÂMERA TRASEIRA
-    // --------------------------------------
+  if (texto !== ultimoCodigo) {
+
+    ultimoCodigo = texto;
+
+
+    if (navigator.vibrate) {
+
+      navigator.vibrate([
+        100,
+        50,
+        100
+      ]);
+
+    }
+
+  }
+
+}
+
+
+// ========================================
+// ABRIR CÂMERA
+// ========================================
+
+btnCamera.addEventListener(
+  "click",
+  abrirCamera
+);
+
+
+async function abrirCamera() {
+
+  btnCamera.disabled = true;
+
+  btnCamera.innerText =
+    "ABRINDO CÂMERA...";
+
+
+  codigo.innerText =
+    "Procurando código...";
+
+
+  formato.innerText = "";
+
+
+  mensagem.innerText =
+    "Solicitando acesso à câmera traseira...";
+
+
+  try {
+
+    leitor = criarLeitor();
+
 
     const constraints = {
 
@@ -267,16 +464,18 @@ async function iniciarLeitor() {
 
         height: {
           ideal: 1080
+        },
+
+        focusMode: {
+          ideal: "continuous"
         }
 
-      }
+      },
+
+      audio: false
 
     };
 
-
-    // --------------------------------------
-    // INICIAR LEITURA
-    // --------------------------------------
 
     await leitor.decodeFromConstraints(
 
@@ -284,38 +483,11 @@ async function iniciarLeitor() {
 
       video,
 
-      (resultado, erro) => {
+      function(resultado, erro) {
 
         if (resultado) {
 
-          const texto = resultado.getText();
-
-          if (texto && texto !== ultimoCodigo) {
-
-            ultimoCodigo = texto;
-
-            codigo.innerText = texto;
-
-            mensagem.innerText =
-              "Código identificado com sucesso!";
-
-            if (navigator.vibrate) {
-              navigator.vibrate(200);
-            }
-
-          }
-
-        }
-
-        if (erro) {
-
-          // NotFoundException é normal.
-          // Significa apenas que naquele quadro
-          // ainda não encontrou código.
-
-          if (!(erro instanceof ZXing.NotFoundException)) {
-            console.log(erro);
-          }
+          mostrarResultado(resultado);
 
         }
 
@@ -324,30 +496,352 @@ async function iniciarLeitor() {
     );
 
 
-    cameraAtiva = true;
+    // Pegar stream que o ZXing colocou no vídeo
 
-    btnCamera.innerText = "CÂMERA ATIVA";
+    streamAtual =
+      video.srcObject;
+
+
+    if (streamAtual) {
+
+      const tracks =
+        streamAtual.getVideoTracks();
+
+
+      if (tracks.length > 0) {
+
+        trackVideo =
+          tracks[0];
+
+      }
+
+    }
+
+
+    btnCamera.innerText =
+      "CÂMERA ATIVA";
+
+
+    btnCapturar.disabled =
+      false;
+
 
     mensagem.innerText =
-      "Câmera aberta. Procurando código de barras...";
+      "Câmera ativa. Procurando código automaticamente...";
+
+
+    verificarLanterna();
 
 
   } catch (erro) {
 
     console.error(erro);
 
-    cameraAtiva = false;
 
-    btnCamera.disabled = false;
+    btnCamera.disabled =
+      false;
+
 
     btnCamera.innerText =
       "TENTAR NOVAMENTE";
 
+
     codigo.innerText =
       "Câmera não iniciada";
 
+
     mensagem.innerText =
       "Erro: " + erro.message;
+
+  }
+
+}
+
+
+// ========================================
+// VERIFICAR LANTERNA
+// ========================================
+
+function verificarLanterna() {
+
+  if (!trackVideo) {
+    return;
+  }
+
+
+  try {
+
+    const capacidades =
+      trackVideo.getCapabilities();
+
+
+    if (capacidades.torch) {
+
+      btnLanterna.disabled =
+        false;
+
+    }
+
+  } catch (erro) {
+
+    console.log(
+      "Lanterna não disponível."
+    );
+
+  }
+
+}
+
+
+// ========================================
+// LANTERNA
+// ========================================
+
+btnLanterna.addEventListener(
+  "click",
+  async function() {
+
+    if (!trackVideo) {
+      return;
+    }
+
+
+    try {
+
+      lanternaLigada =
+        !lanternaLigada;
+
+
+      await trackVideo.applyConstraints({
+
+        advanced: [
+
+          {
+            torch: lanternaLigada
+          }
+
+        ]
+
+      });
+
+
+      btnLanterna.innerText =
+        lanternaLigada
+        ? "DESLIGAR LANTERNA"
+        : "LIGAR LANTERNA";
+
+
+    } catch (erro) {
+
+      mensagem.innerText =
+        "Este aparelho não permitiu controlar a lanterna.";
+
+    }
+
+  }
+);
+
+
+// ========================================
+// CAPTURAR IMAGEM E TENTAR LER
+// ========================================
+
+btnCapturar.addEventListener(
+  "click",
+  capturarELer
+);
+
+
+async function capturarELer() {
+
+  if (!video.videoWidth) {
+
+    mensagem.innerText =
+      "A câmera ainda não está pronta.";
+
+    return;
+
+  }
+
+
+  mensagem.innerText =
+    "Capturando imagem...";
+
+
+  const largura =
+    video.videoWidth;
+
+  const altura =
+    video.videoHeight;
+
+
+  canvas.width =
+    largura;
+
+  canvas.height =
+    altura;
+
+
+  const ctx =
+    canvas.getContext(
+      "2d",
+      {
+        willReadFrequently: true
+      }
+    );
+
+
+  ctx.drawImage(
+    video,
+    0,
+    0,
+    largura,
+    altura
+  );
+
+
+  try {
+
+    /*
+      Primeiro tentamos ler
+      a imagem completa.
+    */
+
+    const resultado =
+      await leitor.decodeFromCanvas(
+        canvas
+      );
+
+
+    mostrarResultado(
+      resultado
+    );
+
+
+  } catch (erro) {
+
+
+    /*
+      Segunda tentativa:
+      recortamos a região central,
+      onde está a mira amarela.
+    */
+
+
+    tentarRegiaoCentral(
+      ctx,
+      largura,
+      altura
+    );
+
+  }
+
+}
+
+
+// ========================================
+// TENTAR SOMENTE A REGIÃO CENTRAL
+// ========================================
+
+async function tentarRegiaoCentral(
+  ctx,
+  largura,
+  altura
+) {
+
+  try {
+
+    const recorteLargura =
+      Math.floor(
+        largura * 0.95
+      );
+
+
+    const recorteAltura =
+      Math.floor(
+        altura * 0.42
+      );
+
+
+    const inicioX =
+      Math.floor(
+        (largura - recorteLargura) / 2
+      );
+
+
+    const inicioY =
+      Math.floor(
+        (altura - recorteAltura) / 2
+      );
+
+
+    const dados =
+      ctx.getImageData(
+
+        inicioX,
+
+        inicioY,
+
+        recorteLargura,
+
+        recorteAltura
+
+      );
+
+
+    const canvasRecorte =
+      document.createElement(
+        "canvas"
+      );
+
+
+    canvasRecorte.width =
+      recorteLargura;
+
+
+    canvasRecorte.height =
+      recorteAltura;
+
+
+    const contextoRecorte =
+      canvasRecorte.getContext(
+        "2d"
+      );
+
+
+    contextoRecorte.putImageData(
+      dados,
+      0,
+      0
+    );
+
+
+    const resultado =
+      await leitor.decodeFromCanvas(
+        canvasRecorte
+      );
+
+
+    mostrarResultado(
+      resultado
+    );
+
+
+  } catch (erro) {
+
+    console.log(erro);
+
+
+    codigo.innerText =
+      "Não identificado";
+
+
+    formato.innerText = "";
+
+
+    mensagem.innerText =
+      "Não consegui ler esta captura. " +
+      "Aproxime o código até as barras ficarem nítidas e tente novamente.";
 
   }
 
