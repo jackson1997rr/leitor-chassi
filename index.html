@@ -301,6 +301,10 @@ canvas {
   background: #2563eb;
   outline: 2px solid #60a5fa;
 }
+#btnDigitarManual {
+  background: #d97706;
+  margin-top: 8px;
+}
 #btnSalvar {
   background: #16a34a;
 }
@@ -453,7 +457,8 @@ canvas {
 
   <div class="campo">
     <label>CHASSIS / CÓDIGO LIDO</label>
-    <input id="chassiCadastro" type="text" readonly placeholder="Aguardando leitura...">
+    <input id="chassiCadastro" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Leia ou digite o chassi...">
+    <button type="button" id="btnDigitarManual">DIGITAR MANUALMENTE</button>
   </div>
 
   <div class="campo">
@@ -568,6 +573,7 @@ let ultimoCodigo = "";
 const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx7gLj67JSX1_I0bhOkEzCJKyJlgJei66XEICrQJKd82LrnRx7iXAcXfpoTf7-egYwNSg/exec";
 
 const chassiCadastro = document.getElementById("chassiCadastro");
+const btnDigitarManual = document.getElementById("btnDigitarManual");
 const modeloCadastro = document.getElementById("modeloCadastro");
 const versaoCadastro = document.getElementById("versaoCadastro");
 const corCadastro = document.getElementById("corCadastro");
@@ -578,6 +584,25 @@ const statusCadastro = document.getElementById("statusCadastro");
 const marcaBotoes = Array.from(document.querySelectorAll(".marca-btn"));
 
 let marcaSelecionada = "";
+
+
+// Entrada manual do chassi quando o código de barras não puder ser lido.
+btnDigitarManual.addEventListener("click", function() {
+  chassiCadastro.removeAttribute("readonly");
+  chassiCadastro.focus();
+  chassiCadastro.select();
+  statusCadastro.textContent = "Digite o chassi e depois complete o cadastro.";
+  statusCadastro.className = "status-info";
+});
+
+chassiCadastro.addEventListener("input", function() {
+  const inicio = this.selectionStart;
+  this.value = this.value.toUpperCase().replace(/\s+/g, "");
+  try {
+    this.setSelectionRange(inicio, inicio);
+  } catch (_) {}
+});
+
 
 const catalogo = {
   FIAT: {
@@ -701,6 +726,7 @@ modeloCadastro.addEventListener("change", function() {
 
 function prepararNovoCadastro() {
   chassiCadastro.value = "";
+  chassiCadastro.placeholder = "Leia ou digite o chassi...";
   marcaSelecionada = "";
   marcaBotoes.forEach(b => b.classList.remove("ativo"));
   preencherSelect(modeloCadastro, [], "Selecione a marca primeiro");
@@ -1454,7 +1480,7 @@ function mostrarResultado(
 
   // Envia automaticamente o código lido para o formulário de cadastro.
   if (chassiCadastro) {
-    chassiCadastro.value = String(valor).trim().toUpperCase();
+    chassiCadastro.value = String(valor).trim().toUpperCase().replace(/\s+/g, "");
   }
 
 
