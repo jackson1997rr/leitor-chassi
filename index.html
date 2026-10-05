@@ -11,10 +11,7 @@
 
 <title>Leitor de Código de Barras</title>
 
-<script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"></script>
-
 <style>
-
 * {
   box-sizing: border-box;
 }
@@ -24,14 +21,13 @@ body {
   background: #0f172a;
   color: white;
   font-family: Arial, sans-serif;
-  text-align: center;
 }
 
 .container {
-  width: 100%;
   max-width: 650px;
   margin: auto;
   padding: 18px;
+  text-align: center;
 }
 
 h1 {
@@ -47,20 +43,18 @@ h1 {
 .camera-box {
   position: relative;
   width: 100%;
-  height: 380px;
+  height: 390px;
+  overflow: hidden;
+  border-radius: 16px;
   background: black;
   border: 2px solid #334155;
-  border-radius: 16px;
-  overflow: hidden;
 }
 
-#video {
+video {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
-
-/* Área onde queremos posicionar o código */
 
 .mira {
   position: absolute;
@@ -68,23 +62,21 @@ h1 {
   right: 5%;
   top: 50%;
   transform: translateY(-50%);
-  height: 145px;
+  height: 150px;
 
   border: 3px solid #f59e0b;
-  border-radius: 8px;
+  border-radius: 10px;
 
   box-shadow:
-    0 0 0 9999px rgba(0,0,0,0.30);
+    0 0 0 9999px rgba(0,0,0,0.25);
 
   pointer-events: none;
 }
 
 .linha {
   position: absolute;
-
   left: 3%;
   right: 3%;
-
   top: 50%;
 
   height: 3px;
@@ -92,29 +84,28 @@ h1 {
   background: #ef4444;
 
   box-shadow:
-    0 0 10px #ef4444;
+    0 0 12px #ef4444;
 }
 
 .instrucao {
-  margin-top: 13px;
   color: #cbd5e1;
+  margin: 15px 0;
   font-size: 14px;
   line-height: 1.4;
 }
 
 button {
   width: 100%;
+  padding: 16px;
+  margin-top: 12px;
+
   border: 0;
   border-radius: 12px;
-  padding: 16px;
-  margin-top: 14px;
-
-  color: white;
 
   font-size: 17px;
   font-weight: bold;
 
-  cursor: pointer;
+  color: white;
 }
 
 #btnCamera {
@@ -127,39 +118,28 @@ button {
 
 #btnCapturar:disabled {
   background: #475569;
-  opacity: 0.7;
-}
-
-#btnLanterna {
-  background: #d97706;
-}
-
-#btnLanterna:disabled {
-  background: #475569;
-  opacity: 0.7;
 }
 
 .resultado {
-  margin-top: 18px;
-
-  padding: 20px;
+  margin-top: 20px;
+  padding: 22px;
 
   background: #1e293b;
 
   border-radius: 14px;
 }
 
-.rotulo {
+.label {
   color: #94a3b8;
   font-size: 13px;
 }
 
 #codigo {
-  margin-top: 8px;
+  margin-top: 10px;
 
   color: #22c55e;
 
-  font-size: 24px;
+  font-size: 25px;
   font-weight: bold;
 
   word-break: break-all;
@@ -169,101 +149,98 @@ button {
   margin-top: 8px;
 
   color: #38bdf8;
-
-  font-size: 14px;
 }
 
 #mensagem {
-  margin-top: 15px;
+  margin-top: 17px;
+  padding-bottom: 20px;
 
   color: #fbbf24;
 
-  line-height: 1.4;
-
   font-size: 14px;
+  line-height: 1.4;
 }
 
-/* Canvas usado para captura */
+#motor {
+  margin-top: 7px;
 
-#canvas {
+  color: #94a3b8;
+
+  font-size: 12px;
+}
+
+canvas {
   display: none;
 }
-
 </style>
 </head>
-
 
 <body>
 
 <div class="container">
 
-  <h1>Leitor de Código de Barras</h1>
+<h1>Leitor de Código de Barras</h1>
 
-  <div class="subtitulo">
-    Centralize o código dentro da área amarela
+<div class="subtitulo">
+  Centralize o código dentro da área amarela
+</div>
+
+
+<div class="camera-box">
+
+  <video
+    id="video"
+    autoplay
+    muted
+    playsinline>
+  </video>
+
+  <div class="mira">
+    <div class="linha"></div>
   </div>
 
+</div>
 
-  <div class="camera-box">
 
-    <video
-      id="video"
-      autoplay
-      muted
-      playsinline>
-    </video>
+<div class="instrucao">
+  Mantenha todas as barras visíveis e deixe
+  a câmera focar antes de capturar.
+</div>
 
-    <div class="mira">
 
-      <div class="linha"></div>
+<button id="btnCamera">
+  ABRIR CÂMERA
+</button>
 
-    </div>
 
+<button id="btnCapturar" disabled>
+  CAPTURAR E LER
+</button>
+
+
+<div class="resultado">
+
+  <div class="label">
+    CÓDIGO LIDO
   </div>
 
-
-  <div class="instrucao">
-    Mantenha todas as barras dentro do retângulo amarelo.
-    A leitura automática ficará funcionando continuamente.
+  <div id="codigo">
+    Aguardando...
   </div>
 
+  <div id="formato"></div>
 
-  <button id="btnCamera">
-    ABRIR CÂMERA
-  </button>
+  <div id="motor"></div>
 
-
-  <button id="btnCapturar" disabled>
-    CAPTURAR E LER
-  </button>
+</div>
 
 
-  <button id="btnLanterna" disabled>
-    LIGAR LANTERNA
-  </button>
+<div id="mensagem">
+  Abra a câmera para começar.
+</div>
 
 
-  <div class="resultado">
-
-    <div class="rotulo">
-      CÓDIGO LIDO
-    </div>
-
-    <div id="codigo">
-      Aguardando...
-    </div>
-
-    <div id="formato"></div>
-
-  </div>
-
-
-  <div id="mensagem">
-    Abra a câmera para começar.
-  </div>
-
-
-  <canvas id="canvas"></canvas>
+<canvas id="canvas"></canvas>
 
 </div>
 
@@ -276,6 +253,12 @@ const video =
 const canvas =
   document.getElementById("canvas");
 
+const btnCamera =
+  document.getElementById("btnCamera");
+
+const btnCapturar =
+  document.getElementById("btnCapturar");
+
 const codigo =
   document.getElementById("codigo");
 
@@ -285,140 +268,120 @@ const formato =
 const mensagem =
   document.getElementById("mensagem");
 
-const btnCamera =
-  document.getElementById("btnCamera");
-
-const btnCapturar =
-  document.getElementById("btnCapturar");
-
-const btnLanterna =
-  document.getElementById("btnLanterna");
+const motor =
+  document.getElementById("motor");
 
 
-let leitor = null;
+let stream = null;
 
-let streamAtual = null;
+let detector = null;
 
-let trackVideo = null;
+let leituraAutomatica = null;
 
-let lanternaLigada = false;
+let processando = false;
 
 let ultimoCodigo = "";
 
 
-// ========================================
-// CONFIGURAÇÃO DO ZXING
-// ========================================
+// ==========================================
+// VERIFICAR BARCODE DETECTOR
+// ==========================================
 
-function criarLeitor() {
+async function prepararDetector() {
 
-  const hints = new Map();
+  if (!("BarcodeDetector" in window)) {
 
-  const formatos = [
+    motor.innerText =
+      "BarcodeDetector não disponível neste navegador.";
 
-    ZXing.BarcodeFormat.EAN_13,
+    return false;
 
-    ZXing.BarcodeFormat.CODE_128,
-
-    ZXing.BarcodeFormat.CODE_39,
-
-    ZXing.BarcodeFormat.CODE_93,
-
-    ZXing.BarcodeFormat.ITF,
-
-    ZXing.BarcodeFormat.CODABAR,
-
-    ZXing.BarcodeFormat.EAN_8,
-
-    ZXing.BarcodeFormat.UPC_A,
-
-    ZXing.BarcodeFormat.UPC_E
-
-  ];
-
-
-  hints.set(
-    ZXing.DecodeHintType.POSSIBLE_FORMATS,
-    formatos
-  );
-
-
-  hints.set(
-    ZXing.DecodeHintType.TRY_HARDER,
-    true
-  );
-
-
-  return new ZXing.BrowserMultiFormatReader(hints);
-
-}
-
-
-// ========================================
-// MOSTRAR RESULTADO
-// ========================================
-
-function mostrarResultado(resultado) {
-
-  if (!resultado) {
-    return;
   }
-
-
-  const texto =
-    resultado.getText();
-
-
-  if (!texto) {
-    return;
-  }
-
-
-  codigo.innerText =
-    texto;
 
 
   try {
 
-    formato.innerText =
-      "Formato: " +
-      resultado.getBarcodeFormat();
-
-  } catch (e) {
-
-    formato.innerText =
-      "Código identificado";
-
-  }
+    const suportados =
+      await BarcodeDetector.getSupportedFormats();
 
 
-  mensagem.innerText =
-    "Código identificado com sucesso!";
+    console.log(
+      "Formatos disponíveis:",
+      suportados
+    );
 
 
-  if (texto !== ultimoCodigo) {
+    const desejados = [
 
-    ultimoCodigo = texto;
+      "ean_13",
+
+      "ean_8",
+
+      "code_128",
+
+      "code_39",
+
+      "code_93",
+
+      "codabar",
+
+      "itf",
+
+      "upc_a",
+
+      "upc_e"
+
+    ];
 
 
-    if (navigator.vibrate) {
+    const formatosValidos =
+      desejados.filter(
+        item => suportados.includes(item)
+      );
 
-      navigator.vibrate([
-        100,
-        50,
-        100
-      ]);
+
+    if (formatosValidos.length === 0) {
+
+      motor.innerText =
+        "Nenhum formato 1D compatível encontrado.";
+
+      return false;
 
     }
+
+
+    detector =
+      new BarcodeDetector({
+
+        formats: formatosValidos
+
+      });
+
+
+    motor.innerText =
+      "Motor: leitor nativo do navegador";
+
+
+    return true;
+
+
+  } catch (erro) {
+
+    console.error(erro);
+
+    motor.innerText =
+      "Falha ao iniciar o leitor nativo.";
+
+    return false;
 
   }
 
 }
 
 
-// ========================================
+// ==========================================
 // ABRIR CÂMERA
-// ========================================
+// ==========================================
 
 btnCamera.addEventListener(
   "click",
@@ -442,80 +405,53 @@ async function abrirCamera() {
 
 
   mensagem.innerText =
-    "Solicitando acesso à câmera traseira...";
+    "Solicitando câmera traseira...";
 
 
   try {
 
-    leitor = criarLeitor();
+    const detectorOk =
+      await prepararDetector();
 
 
-    const constraints = {
+    if (!detectorOk) {
 
-      video: {
-
-        facingMode: {
-          ideal: "environment"
-        },
-
-        width: {
-          ideal: 1920
-        },
-
-        height: {
-          ideal: 1080
-        },
-
-        focusMode: {
-          ideal: "continuous"
-        }
-
-      },
-
-      audio: false
-
-    };
-
-
-    await leitor.decodeFromConstraints(
-
-      constraints,
-
-      video,
-
-      function(resultado, erro) {
-
-        if (resultado) {
-
-          mostrarResultado(resultado);
-
-        }
-
-      }
-
-    );
-
-
-    // Pegar stream que o ZXing colocou no vídeo
-
-    streamAtual =
-      video.srcObject;
-
-
-    if (streamAtual) {
-
-      const tracks =
-        streamAtual.getVideoTracks();
-
-
-      if (tracks.length > 0) {
-
-        trackVideo =
-          tracks[0];
-
-      }
+      throw new Error(
+        "O navegador não disponibilizou o leitor de código necessário."
+      );
 
     }
+
+
+    stream =
+      await navigator.mediaDevices.getUserMedia({
+
+        audio: false,
+
+        video: {
+
+          facingMode: {
+            ideal: "environment"
+          },
+
+          width: {
+            ideal: 1920
+          },
+
+          height: {
+            ideal: 1080
+          }
+
+        }
+
+      });
+
+
+    video.srcObject =
+      stream;
+
+
+    await video.play();
 
 
     btnCamera.innerText =
@@ -527,10 +463,10 @@ async function abrirCamera() {
 
 
     mensagem.innerText =
-      "Câmera ativa. Procurando código automaticamente...";
+      "Leitura automática ativa. Aponte para o código.";
 
 
-    verificarLanterna();
+    iniciarLeituraAutomatica();
 
 
   } catch (erro) {
@@ -547,7 +483,7 @@ async function abrirCamera() {
 
 
     codigo.innerText =
-      "Câmera não iniciada";
+      "Leitor não iniciado";
 
 
     mensagem.innerText =
@@ -558,93 +494,140 @@ async function abrirCamera() {
 }
 
 
-// ========================================
-// VERIFICAR LANTERNA
-// ========================================
+// ==========================================
+// LEITURA AUTOMÁTICA
+// ==========================================
 
-function verificarLanterna() {
+function iniciarLeituraAutomatica() {
 
-  if (!trackVideo) {
+  if (leituraAutomatica) {
+
+    clearInterval(
+      leituraAutomatica
+    );
+
+  }
+
+
+  leituraAutomatica =
+    setInterval(
+
+      async function() {
+
+        if (
+          !detector ||
+          processando ||
+          video.readyState < 2
+        ) {
+
+          return;
+
+        }
+
+
+        processando = true;
+
+
+        try {
+
+          const resultados =
+            await detector.detect(video);
+
+
+          if (
+            resultados &&
+            resultados.length > 0
+          ) {
+
+            mostrarResultado(
+              resultados[0]
+            );
+
+          }
+
+
+        } catch (erro) {
+
+          console.log(
+            "Tentativa de leitura:",
+            erro
+          );
+
+        }
+
+
+        processando = false;
+
+      },
+
+      250
+
+    );
+
+}
+
+
+// ==========================================
+// MOSTRAR RESULTADO
+// ==========================================
+
+function mostrarResultado(item) {
+
+  if (!item) {
     return;
   }
 
 
-  try {
-
-    const capacidades =
-      trackVideo.getCapabilities();
+  const valor =
+    item.rawValue || "";
 
 
-    if (capacidades.torch) {
+  if (!valor) {
+    return;
+  }
 
-      btnLanterna.disabled =
-        false;
+
+  codigo.innerText =
+    valor;
+
+
+  formato.innerText =
+    "Formato: " +
+    (item.format || "identificado");
+
+
+  mensagem.innerText =
+    "Código identificado com sucesso!";
+
+
+  if (
+    valor !== ultimoCodigo
+  ) {
+
+    ultimoCodigo =
+      valor;
+
+
+    if (
+      navigator.vibrate
+    ) {
+
+      navigator.vibrate([
+        100,
+        50,
+        100
+      ]);
 
     }
-
-  } catch (erro) {
-
-    console.log(
-      "Lanterna não disponível."
-    );
 
   }
 
 }
 
 
-// ========================================
-// LANTERNA
-// ========================================
-
-btnLanterna.addEventListener(
-  "click",
-  async function() {
-
-    if (!trackVideo) {
-      return;
-    }
-
-
-    try {
-
-      lanternaLigada =
-        !lanternaLigada;
-
-
-      await trackVideo.applyConstraints({
-
-        advanced: [
-
-          {
-            torch: lanternaLigada
-          }
-
-        ]
-
-      });
-
-
-      btnLanterna.innerText =
-        lanternaLigada
-        ? "DESLIGAR LANTERNA"
-        : "LIGAR LANTERNA";
-
-
-    } catch (erro) {
-
-      mensagem.innerText =
-        "Este aparelho não permitiu controlar a lanterna.";
-
-    }
-
-  }
-);
-
-
-// ========================================
-// CAPTURAR IMAGEM E TENTAR LER
-// ========================================
+// ==========================================
+// CAPTURAR E LER
+// ==========================================
 
 btnCapturar.addEventListener(
   "click",
@@ -654,7 +637,10 @@ btnCapturar.addEventListener(
 
 async function capturarELer() {
 
-  if (!video.videoWidth) {
+  if (
+    !detector ||
+    !video.videoWidth
+  ) {
 
     mensagem.innerText =
       "A câmera ainda não está pronta.";
@@ -665,91 +651,77 @@ async function capturarELer() {
 
 
   mensagem.innerText =
-    "Capturando imagem...";
+    "Capturando imagem e analisando...";
 
 
-  const largura =
-    video.videoWidth;
-
-  const altura =
-    video.videoHeight;
-
-
-  canvas.width =
-    largura;
-
-  canvas.height =
-    altura;
-
-
-  const ctx =
-    canvas.getContext(
-      "2d",
-      {
-        willReadFrequently: true
-      }
-    );
-
-
-  ctx.drawImage(
-    video,
-    0,
-    0,
-    largura,
-    altura
-  );
+  btnCapturar.disabled =
+    true;
 
 
   try {
 
-    /*
-      Primeiro tentamos ler
-      a imagem completa.
-    */
+    const largura =
+      video.videoWidth;
 
-    const resultado =
-      await leitor.decodeFromCanvas(
-        canvas
+    const altura =
+      video.videoHeight;
+
+
+    canvas.width =
+      largura;
+
+    canvas.height =
+      altura;
+
+
+    const ctx =
+      canvas.getContext(
+        "2d",
+        {
+          willReadFrequently: true
+        }
       );
 
 
-    mostrarResultado(
-      resultado
-    );
-
-
-  } catch (erro) {
-
-
-    /*
-      Segunda tentativa:
-      recortamos a região central,
-      onde está a mira amarela.
-    */
-
-
-    tentarRegiaoCentral(
-      ctx,
+    ctx.drawImage(
+      video,
+      0,
+      0,
       largura,
       altura
     );
 
-  }
 
-}
+    // PRIMEIRA TENTATIVA:
+    // imagem inteira
+
+    let resultados =
+      await detector.detect(
+        canvas
+      );
 
 
-// ========================================
-// TENTAR SOMENTE A REGIÃO CENTRAL
-// ========================================
+    if (
+      resultados &&
+      resultados.length > 0
+    ) {
 
-async function tentarRegiaoCentral(
-  ctx,
-  largura,
-  altura
-) {
+      mostrarResultado(
+        resultados[0]
+      );
 
-  try {
+
+      btnCapturar.disabled =
+        false;
+
+
+      return;
+
+    }
+
+
+    // SEGUNDA TENTATIVA:
+    // somente faixa central
 
     const recorteLargura =
       Math.floor(
@@ -759,7 +731,7 @@ async function tentarRegiaoCentral(
 
     const recorteAltura =
       Math.floor(
-        altura * 0.42
+        altura * 0.45
       );
 
 
@@ -775,75 +747,89 @@ async function tentarRegiaoCentral(
       );
 
 
-    const dados =
-      ctx.getImageData(
-
-        inicioX,
-
-        inicioY,
-
-        recorteLargura,
-
-        recorteAltura
-
-      );
-
-
-    const canvasRecorte =
+    const canvas2 =
       document.createElement(
         "canvas"
       );
 
 
-    canvasRecorte.width =
+    canvas2.width =
       recorteLargura;
 
 
-    canvasRecorte.height =
+    canvas2.height =
       recorteAltura;
 
 
-    const contextoRecorte =
-      canvasRecorte.getContext(
+    const ctx2 =
+      canvas2.getContext(
         "2d"
       );
 
 
-    contextoRecorte.putImageData(
-      dados,
+    ctx2.drawImage(
+
+      canvas,
+
+      inicioX,
+      inicioY,
+
+      recorteLargura,
+      recorteAltura,
+
       0,
-      0
+      0,
+
+      recorteLargura,
+      recorteAltura
+
     );
 
 
-    const resultado =
-      await leitor.decodeFromCanvas(
-        canvasRecorte
+    resultados =
+      await detector.detect(
+        canvas2
       );
 
 
-    mostrarResultado(
-      resultado
-    );
+    if (
+      resultados &&
+      resultados.length > 0
+    ) {
+
+      mostrarResultado(
+        resultados[0]
+      );
+
+    } else {
+
+      codigo.innerText =
+        "Não identificado";
+
+
+      formato.innerText = "";
+
+
+      mensagem.innerText =
+        "Nenhum código foi identificado nesta captura.";
+
+    }
 
 
   } catch (erro) {
 
-    console.log(erro);
-
-
-    codigo.innerText =
-      "Não identificado";
-
-
-    formato.innerText = "";
+    console.error(erro);
 
 
     mensagem.innerText =
-      "Não consegui ler esta captura. " +
-      "Aproxime o código até as barras ficarem nítidas e tente novamente.";
+      "Erro durante a leitura: " +
+      erro.message;
 
   }
+
+
+  btnCapturar.disabled =
+    false;
 
 }
 
