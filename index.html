@@ -1,434 +1,337 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#111827">
-  <title>Leitor de Chassi V2.3</title>
+  <meta charset="UTF-8">
 
-  <script src="https://unpkg.com/@zxing/browser@0.1.5/umd/zxing-browser.min.js"></script>
+  <meta name="viewport"
+        content="width=device-width,
+        initial-scale=1.0,
+        maximum-scale=1.0,
+        user-scalable=no">
+
+  <title>Leitor de Código de Barras</title>
+
+  <script src="https://unpkg.com/@zxing/library@latest"></script>
 
   <style>
-    *{box-sizing:border-box}
-    body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f3f4f6;color:#111827}
-    .app{max-width:520px;margin:auto;padding:18px 14px 30px}
-    .top{background:#111827;color:white;border-radius:18px;padding:18px;margin-bottom:14px}
-    .top h1{font-size:22px;margin:0 0 6px}
-    .top p{margin:0;color:#d1d5db;font-size:14px}
-    .card{background:white;border-radius:18px;padding:16px;box-shadow:0 2px 10px rgba(0,0,0,.08);margin-bottom:14px}
-    .step{display:none}.step.active{display:block}
-    label{display:block;font-weight:700;margin:0 0 7px}
-    select,input,button{width:100%;font-size:17px;border-radius:12px;padding:13px;border:1px solid #d1d5db}
-    button{border:0;background:#111827;color:white;font-weight:700;cursor:pointer;margin-top:10px}
-    button.secondary{background:#e5e7eb;color:#111827}
-    button.danger{background:#b91c1c}
-    button:disabled{opacity:.5}
-    .video-wrap{position:relative;background:#000;border-radius:16px;overflow:hidden;aspect-ratio:4/3}
-    video{width:100%;height:100%;object-fit:cover;display:block}
-    .guide{position:absolute;left:12%;right:12%;top:32%;height:36%;border:3px solid #fff;border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.18)}
-    .status{padding:11px;border-radius:12px;background:#f3f4f6;margin-top:10px;font-size:14px}
-    .success{background:#dcfce7;color:#166534}
-    .error{background:#fee2e2;color:#991b1b}
-    .muted{font-size:13px;color:#6b7280;line-height:1.45}
-    .row{display:grid;grid-template-columns:1fr 1fr;gap:9px}
-    .confirm{font-size:16px;line-height:1.7}
-    .confirm b{display:inline-block;min-width:90px}
-    .hidden{display:none!important}
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #111827;
+      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 600px;
+      margin: auto;
+    }
+
+    h1 {
+      font-size: 25px;
+      margin-bottom: 5px;
+    }
+
+    .status {
+      color: #cbd5e1;
+      margin-bottom: 20px;
+    }
+
+    .camera-box {
+      position: relative;
+      width: 100%;
+      overflow: hidden;
+      border-radius: 15px;
+      background: black;
+      border: 2px solid #374151;
+    }
+
+    video {
+      width: 100%;
+      display: block;
+      min-height: 300px;
+      object-fit: cover;
+    }
+
+    .linha {
+      position: absolute;
+      left: 5%;
+      right: 5%;
+      top: 50%;
+      height: 3px;
+      background: #ef4444;
+      box-shadow: 0 0 10px #ef4444;
+    }
+
+    .instrucao {
+      margin-top: 12px;
+      color: #cbd5e1;
+      font-size: 14px;
+    }
+
+    button {
+      width: 100%;
+      margin-top: 18px;
+      padding: 16px;
+      border: none;
+      border-radius: 10px;
+      background: #2563eb;
+      color: white;
+      font-size: 17px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    .resultado {
+      margin-top: 20px;
+      padding: 20px;
+      background: #1f2937;
+      border-radius: 12px;
+    }
+
+    .resultado small {
+      color: #9ca3af;
+    }
+
+    #codigo {
+      margin-top: 8px;
+      font-size: 22px;
+      font-weight: bold;
+      word-break: break-all;
+      color: #22c55e;
+    }
+
+    #mensagem {
+      margin-top: 15px;
+      font-size: 14px;
+      color: #fbbf24;
+    }
   </style>
 </head>
 
 <body>
-<div class="app">
-  <div class="top">
-    <h1>📷 Leitor de Chassi</h1>
-    <p>Versão 2.3 — captura da foto + leitura do chassi</p>
+
+<div class="container">
+
+  <h1>Leitor de Código de Barras</h1>
+
+  <div class="status">
+    Aponte a câmera para o código do chassi
   </div>
 
-  <div class="card">
-    <div class="step active" id="step1">
-      <label>1. Leia o código de barras do chassi</label>
-      <div class="video-wrap">
-        <video id="video" playsinline muted></video>
-        <div class="guide"></div>
-      </div>
-      <div id="cameraStatus" class="status">Iniciando câmera...</div>
-      <button id="btnCamera" onclick="startScanner()">📷 Iniciar câmera</button>
-      <button id="btnCapturar" onclick="capturarELer()">📸 Capturar foto e ler código</button>
-      <canvas id="captureCanvas" class="hidden"></canvas>
-      <div style="height:10px"></div>
-      <label for="manualChassi">Chassi identificado</label>
-      <input id="manualChassi" placeholder="O chassi aparecerá aqui após a leitura">
-      <button class="secondary" onclick="usarManual()">Continuar com este chassi</button>
-      <p class="muted">Posicione o código longo na moldura e toque em "Capturar foto e ler código". O valor identificado aparecerá no campo "Chassi identificado" para conferência.</p>
-    </div>
+  <div class="camera-box">
 
-    <div class="step" id="step2">
-      <label>2. Modelo do veículo</label>
-      <select id="modelo"></select>
-      <button onclick="proximoModelo()">Continuar</button>
-    </div>
+    <video id="video"
+           autoplay
+           playsinline>
+    </video>
 
-    <div class="step" id="step3">
-      <label>3. Cor do veículo</label>
-      <select id="cor"></select>
-      <button onclick="proximoCor()">Continuar</button>
-      <button class="secondary" onclick="voltar(2)">Voltar</button>
-    </div>
+    <div class="linha"></div>
 
-    <div class="step" id="step4">
-      <label>4. Pátio</label>
-      <select id="patio"></select>
-      <button onclick="proximoPatio()">Continuar</button>
-      <button class="secondary" onclick="voltar(3)">Voltar</button>
-    </div>
-
-    <div class="step" id="step5">
-      <label>5. Confirme os dados</label>
-      <div class="confirm">
-        <div><b>Chassi:</b> <span id="cChassi"></span></div>
-        <div><b>Modelo:</b> <span id="cModelo"></span></div>
-        <div><b>Cor:</b> <span id="cCor"></span></div>
-        <div><b>Pátio:</b> <span id="cPatio"></span></div>
-      </div>
-      <button id="btnSalvar" onclick="salvar()">✅ Salvar na planilha</button>
-      <button class="secondary" onclick="voltar(4)">Voltar</button>
-      <div id="saveStatus" class="status hidden"></div>
-    </div>
-
-    <div class="step" id="step6">
-      <div class="status success">
-        <h2 style="margin:0 0 8px">✅ Cadastrado!</h2>
-        <div id="successText"></div>
-      </div>
-      <button onclick="novoVeiculo()">📷 Ler próximo veículo</button>
-    </div>
   </div>
+
+  <div class="instrucao">
+    Posicione o código de barras atravessando a linha vermelha.
+  </div>
+
+  <button id="btnCamera">
+    ABRIR CÂMERA
+  </button>
+
+  <div class="resultado">
+
+    <small>CÓDIGO LIDO</small>
+
+    <div id="codigo">
+      Aguardando leitura...
+    </div>
+
+  </div>
+
+  <div id="mensagem"></div>
+
 </div>
 
+
 <script>
-  // COLE A URL /exec da implantação do seu Apps Script aqui.
-  const API_URL = 'https://script.google.com/macros/s/AKfycbz13cN_mLggJNnx7_9SwXcqRX45kILMkUK7-jMoG1mdCK1euw-1bDgDlCeoeEUEY-bN/exec';
 
-  let scanner = null;
-  let controls = null;
-  let scanning = false;
-  let lastCandidate = '';
-  let candidateHits = 0;
+const video = document.getElementById("video");
+const codigo = document.getElementById("codigo");
+const mensagem = document.getElementById("mensagem");
+const btnCamera = document.getElementById("btnCamera");
 
-  const state = {
-    chassi: '',
-    modelo: '',
-    cor: '',
-    patio: ''
-  };
+let leitor = null;
+let lendo = false;
 
-  const config = {
-    modelos: ['Polo','T-Cross','Nivus','Virtus','Taos','Tiguan','Saveiro','Amarok','Outro'],
-    cores: ['Branco','Preto','Prata','Cinza','Vermelho','Azul','Marrom','Verde','Outra'],
-    patios: ['Pátio 01','Pátio 02','Pátio 03','Pátio 04']
-  };
 
-  function $(id){ return document.getElementById(id); }
+// ------------------------------------
+// ABRIR CÂMERA
+// ------------------------------------
 
-  function preencherSelect(id, lista){
-    const el = $(id);
-    el.innerHTML = '<option value="">Selecione...</option>' +
-      lista.map(x => '<option value="' + escapeHtml(x) + '">' + escapeHtml(x) + '</option>').join('');
+btnCamera.addEventListener("click", iniciarLeitor);
+
+
+async function iniciarLeitor() {
+
+  if (lendo) {
+    return;
   }
 
-  function escapeHtml(s){
-    return String(s).replace(/[&<>"']/g, c => ({
-      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
-    }[c]));
-  }
+  lendo = true;
 
-  function mostrar(n){
-    document.querySelectorAll('.step').forEach(x => x.classList.remove('active'));
-    $('step' + n).classList.add('active');
-    window.scrollTo({top:0, behavior:'smooth'});
-  }
+  btnCamera.innerText = "INICIANDO CÂMERA...";
 
-  function normalizeChassi(v){
-    return String(v || '').toUpperCase().replace(/[^A-Z0-9]/g,'');
-  }
+  codigo.innerText = "Procurando código...";
 
-  function usarManual(){
-    const v = normalizeChassi($('manualChassi').value);
-    if(v.length < 5){
-      alert('Digite um chassi válido.');
-      return;
+  mensagem.innerText =
+    "Permita o acesso à câmera quando o navegador solicitar.";
+
+  try {
+
+    // Configuração para priorizar CODE 128
+    const hints = new Map();
+
+    const formatos = [
+      ZXing.BarcodeFormat.CODE_128,
+      ZXing.BarcodeFormat.CODE_39,
+      ZXing.BarcodeFormat.CODE_93,
+      ZXing.BarcodeFormat.CODABAR,
+      ZXing.BarcodeFormat.ITF,
+      ZXing.BarcodeFormat.EAN_13,
+      ZXing.BarcodeFormat.EAN_8,
+      ZXing.BarcodeFormat.UPC_A,
+      ZXing.BarcodeFormat.UPC_E
+    ];
+
+    hints.set(
+      ZXing.DecodeHintType.POSSIBLE_FORMATS,
+      formatos
+    );
+
+    hints.set(
+      ZXing.DecodeHintType.TRY_HARDER,
+      true
+    );
+
+
+    leitor =
+      new ZXing.BrowserMultiFormatReader(hints);
+
+
+    // Procurar câmeras disponíveis
+    const cameras =
+      await ZXing.BrowserCodeReader.listVideoInputDevices();
+
+
+    if (!cameras || cameras.length === 0) {
+
+      throw new Error(
+        "Nenhuma câmera encontrada."
+      );
+
     }
-    state.chassi = v;
-    stopScanner();
-    mostrar(2);
-  }
 
-  function startScanner(){
-    if (!window.ZXingBrowser){
-      $('cameraStatus').className='status error';
-      $('cameraStatus').textContent='Leitor ZXing não carregado.';
-      return;
+
+    // Normalmente a última câmera é a traseira
+    let cameraSelecionada =
+      cameras[cameras.length - 1];
+
+
+    // Tentar encontrar explicitamente câmera traseira
+    const traseira = cameras.find(camera => {
+
+      const nome =
+        (camera.label || "").toLowerCase();
+
+      return (
+        nome.includes("back") ||
+        nome.includes("rear") ||
+        nome.includes("traseira") ||
+        nome.includes("environment")
+      );
+
+    });
+
+
+    if (traseira) {
+      cameraSelecionada = traseira;
     }
 
-    stopScanner();
-    $('cameraStatus').className='status';
-    $('cameraStatus').textContent='Abrindo câmera traseira...';
-    scanning = true;
 
-    try{
-      // Leitor dedicado a códigos de barras 1D.
-      scanner = new ZXingBrowser.BrowserMultiFormatOneDReader();
-    }catch(e){
-      // Fallback caso a distribuição usada não exponha o leitor 1D.
-      scanner = new ZXingBrowser.BrowserMultiFormatReader();
-    }
+    mensagem.innerText =
+      "Câmera aberta. Procurando código de barras...";
 
-    scanner.decodeFromConstraints(
-      {
-        audio:false,
-        video:{
-          facingMode:{ideal:'environment'},
-          width:{ideal:1920},
-          height:{ideal:1080},
-          frameRate:{ideal:30}
-        }
-      },
-      $('video'),
-      (result, error, ctl) => {
-        controls = ctl;
+    btnCamera.innerText =
+      "CÂMERA ATIVA";
 
-        if(result && scanning){
-          const raw = String(result.getText ? result.getText() : result.text || '');
-          const text = normalizeChassi(raw);
 
-          let formato = '';
-          try{
-            formato = String(result.getBarcodeFormat ? result.getBarcodeFormat() : '');
-          }catch(e){}
+    // ------------------------------------
+    // LEITURA CONTÍNUA
+    // ------------------------------------
 
-          $('cameraStatus').className='status success';
-          $('cameraStatus').textContent =
-            'Código detectado' + (formato ? ' [' + formato + ']' : '') + ': ' + text;
+    leitor.decodeFromVideoDevice(
+      cameraSelecionada.deviceId,
+      video,
+      (resultado, erro) => {
 
-          // Nesta versão de diagnóstico, qualquer leitura é mostrada.
-          // Só avança automaticamente quando houver exatamente 17 caracteres.
-          if(/^[A-HJ-NPR-Z0-9]{17}$/.test(text)){
-            state.chassi = text;
-            if(navigator.vibrate) navigator.vibrate(120);
-            stopScanner();
-            setTimeout(() => mostrar(2), 450);
+        if (resultado) {
+
+          const texto =
+            resultado.getText();
+
+          codigo.innerText = texto;
+
+          mensagem.innerText =
+            "Código identificado com sucesso!";
+
+          // Vibração curta
+          if (navigator.vibrate) {
+            navigator.vibrate(150);
           }
-        }else if(scanning){
-          $('cameraStatus').className='status';
-          $('cameraStatus').textContent =
-            'Procurando código 1D... aproxime até as barras ficarem nítidas e mantenha o código na horizontal.';
+
         }
+
+        if (erro &&
+            !(erro instanceof ZXing.NotFoundException)) {
+
+          console.log(erro);
+
+        }
+
       }
-    ).catch(err => {
-      scanning = false;
-      $('cameraStatus').className='status error';
-      $('cameraStatus').textContent =
-        'Falha ao iniciar o leitor/câmera: ' + (err && err.message ? err.message : err);
-      console.error(err);
-    });
+    );
+
+
+  } catch (erro) {
+
+    console.error(erro);
+
+    lendo = false;
+
+    btnCamera.innerText =
+      "TENTAR NOVAMENTE";
+
+    codigo.innerText =
+      "Câmera não iniciada";
+
+    mensagem.innerText =
+      "Erro: " + erro.message;
+
   }
 
-  async function capturarELer(){
-    if(!scanner){
-      $('cameraStatus').className='status error';
-      $('cameraStatus').textContent='Primeiro toque em "Iniciar câmera".';
-      return;
-    }
+}
 
-    const video = $('video');
-    if(!video.videoWidth || !video.videoHeight){
-      $('cameraStatus').className='status error';
-      $('cameraStatus').textContent='A câmera ainda não está pronta. Aguarde um instante e tente novamente.';
-      return;
-    }
-
-    const canvas = $('captureCanvas');
-    const ctx = canvas.getContext('2d', {willReadFrequently:true});
-
-    // Usa a resolução real do quadro da câmera.
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    $('cameraStatus').className='status';
-    $('cameraStatus').textContent='Foto capturada. Tentando ler o código...';
-
-    try{
-      // Tenta primeiro a imagem inteira.
-      let result = await scanner.decodeFromCanvas(canvas);
-      aplicarResultadoCaptura(result);
-      return;
-    }catch(e){}
-
-    try{
-      // Segunda tentativa: recorta a faixa central onde está a moldura.
-      const crop = document.createElement('canvas');
-      const cctx = crop.getContext('2d', {willReadFrequently:true});
-      const sx = Math.round(canvas.width * 0.08);
-      const sy = Math.round(canvas.height * 0.24);
-      const sw = Math.round(canvas.width * 0.84);
-      const sh = Math.round(canvas.height * 0.52);
-      crop.width = sw;
-      crop.height = sh;
-      cctx.drawImage(canvas, sx, sy, sw, sh, 0, 0, sw, sh);
-
-      let result = await scanner.decodeFromCanvas(crop);
-      aplicarResultadoCaptura(result);
-      return;
-    }catch(e){
-      $('cameraStatus').className='status error';
-      $('cameraStatus').textContent='Não consegui identificar o código nessa foto. Aproxime um pouco, deixe as barras nítidas e toque em "Capturar foto e ler código" novamente.';
-    }
-  }
-
-  function aplicarResultadoCaptura(result){
-    const raw = String(result && result.getText ? result.getText() : '');
-    const text = normalizeChassi(raw);
-
-    if(!text){
-      $('cameraStatus').className='status error';
-      $('cameraStatus').textContent='O código foi detectado, mas não retornou conteúdo.';
-      return;
-    }
-
-    $('manualChassi').value = text;
-
-    let formato = '';
-    try{
-      formato = String(result.getBarcodeFormat ? result.getBarcodeFormat() : '');
-    }catch(e){}
-
-    if(/^[A-HJ-NPR-Z0-9]{17}$/.test(text)){
-      state.chassi = text;
-      $('cameraStatus').className='status success';
-      $('cameraStatus').textContent='Chassi identificado' + (formato ? ' [' + formato + ']' : '') + ': ' + text;
-      if(navigator.vibrate) navigator.vibrate(120);
-    }else{
-      $('cameraStatus').className='status';
-      $('cameraStatus').textContent='Código lido' + (formato ? ' [' + formato + ']' : '') + ': ' + text + '. Confira o valor abaixo.';
-    }
-  }
-
-  function stopScanner(){
-    scanning = false;
-    try{
-      if(controls && controls.stop) controls.stop();
-    }catch(e){}
-    controls = null;
-    try{
-      const v = $('video');
-      if(v.srcObject){
-        v.srcObject.getTracks().forEach(t => t.stop());
-        v.srcObject = null;
-      }
-    }catch(e){}
-  }
-
-  function proximoModelo(){
-    const v = $('modelo').value;
-    if(!v){ alert('Selecione o modelo.'); return; }
-    state.modelo = v;
-    mostrar(3);
-  }
-
-  function proximoCor(){
-    const v = $('cor').value;
-    if(!v){ alert('Selecione a cor.'); return; }
-    state.cor = v;
-    mostrar(4);
-  }
-
-  function proximoPatio(){
-    const v = $('patio').value;
-    if(!v){ alert('Selecione o pátio.'); return; }
-    state.patio = v;
-
-    $('cChassi').textContent = state.chassi;
-    $('cModelo').textContent = state.modelo;
-    $('cCor').textContent = state.cor;
-    $('cPatio').textContent = state.patio;
-
-    $('saveStatus').className='status hidden';
-    mostrar(5);
-  }
-
-  function voltar(n){ mostrar(n); }
-
-  function salvar(){
-    if(!API_URL || API_URL.includes('COLE_AQUI')){
-      alert('Primeiro coloque a URL /exec do Apps Script no código.');
-      return;
-    }
-
-    $('btnSalvar').disabled = true;
-    $('saveStatus').className='status';
-    $('saveStatus').textContent='Salvando...';
-
-    const callbackName = 'cb_' + Date.now();
-    const params = new URLSearchParams({
-      action:'salvar',
-      callback:callbackName,
-      chassi:state.chassi,
-      modelo:state.modelo,
-      cor:state.cor,
-      patio:state.patio
-    });
-
-    const script = document.createElement('script');
-
-    window[callbackName] = function(result){
-      delete window[callbackName];
-      script.remove();
-      $('btnSalvar').disabled = false;
-
-      if(result && result.ok){
-        $('successText').textContent =
-          'Registro nº ' + result.numero + ' salvo na planilha.';
-        mostrar(6);
-      }else if(result && result.duplicate){
-        $('saveStatus').className='status error';
-        $('saveStatus').textContent='⚠️ ' + result.message;
-      }else{
-        $('saveStatus').className='status error';
-        $('saveStatus').textContent='❌ ' + ((result && result.message) || 'Erro ao salvar.');
-      }
-    };
-
-    script.onerror = function(){
-      delete window[callbackName];
-      script.remove();
-      $('btnSalvar').disabled = false;
-      $('saveStatus').className='status error';
-      $('saveStatus').textContent='❌ Não foi possível comunicar com a planilha. Confira a URL da implantação e a permissão do aplicativo.';
-    };
-
-    script.src = API_URL + '?action=salvar&' + params.toString();
-    document.body.appendChild(script);
-  }
-
-  function novoVeiculo(){
-    state.chassi = state.modelo = state.cor = state.patio = '';
-    $('manualChassi').value = '';
-    $('modelo').value = '';
-    $('cor').value = '';
-    $('patio').value = '';
-    $('cameraStatus').className='status';
-    $('cameraStatus').textContent='Pronto para o próximo veículo.';
-    mostrar(1);
-    startScanner();
-  }
-
-  preencherSelect('modelo', config.modelos);
-  preencherSelect('cor', config.cores);
-  preencherSelect('patio', config.patios);
-
-  // Inicia a câmera somente depois de o usuário tocar no botão.
-  $('cameraStatus').textContent='Toque em "Iniciar câmera" para começar.';
 </script>
+
 </body>
 </html>
