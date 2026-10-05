@@ -31,13 +31,13 @@ body {
 }
 
 h1 {
-  font-size: 25px;
-  margin: 12px 0 5px;
+  font-size: 24px;
+  margin: 10px 0 5px;
 }
 
 .subtitulo {
   color: #cbd5e1;
-  margin-bottom: 18px;
+  margin-bottom: 15px;
 }
 
 .camera-box {
@@ -78,34 +78,102 @@ video {
   left: 3%;
   right: 3%;
   top: 50%;
-
   height: 3px;
 
   background: #ef4444;
+  box-shadow: 0 0 12px #ef4444;
+}
 
-  box-shadow:
-    0 0 12px #ef4444;
+.painel-camera {
+  margin-top: 15px;
+  padding: 15px;
+
+  background: #1e293b;
+
+  border-radius: 12px;
+
+  text-align: left;
+}
+
+.painel-camera label {
+  display: block;
+  margin-bottom: 7px;
+
+  color: #94a3b8;
+
+  font-size: 13px;
+}
+
+select {
+  width: 100%;
+
+  padding: 13px;
+
+  border: 1px solid #475569;
+  border-radius: 9px;
+
+  background: #0f172a;
+  color: white;
+
+  font-size: 16px;
+}
+
+.info-camera {
+  margin-top: 10px;
+
+  color: #38bdf8;
+
+  font-size: 13px;
+
+  line-height: 1.5;
+}
+
+.zoom-box {
+  display: none;
+
+  margin-top: 14px;
+}
+
+.zoom-linha {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#zoom {
+  flex: 1;
+}
+
+#zoomValor {
+  min-width: 45px;
+  color: #22c55e;
+  font-weight: bold;
 }
 
 .instrucao {
   color: #cbd5e1;
+
   margin: 15px 0;
+
   font-size: 14px;
+
   line-height: 1.4;
 }
 
 button {
   width: 100%;
+
   padding: 16px;
+
   margin-top: 12px;
 
   border: 0;
   border-radius: 12px;
 
+  color: white;
+
   font-size: 17px;
   font-weight: bold;
-
-  color: white;
 }
 
 #btnCamera {
@@ -121,8 +189,9 @@ button {
 }
 
 .resultado {
-  margin-top: 20px;
-  padding: 22px;
+  margin-top: 18px;
+
+  padding: 20px;
 
   background: #1e293b;
 
@@ -131,15 +200,16 @@ button {
 
 .label {
   color: #94a3b8;
+
   font-size: 13px;
 }
 
 #codigo {
-  margin-top: 10px;
+  margin-top: 8px;
 
   color: #22c55e;
 
-  font-size: 25px;
+  font-size: 24px;
   font-weight: bold;
 
   word-break: break-all;
@@ -152,17 +222,19 @@ button {
 }
 
 #mensagem {
-  margin-top: 17px;
+  margin-top: 15px;
+
   padding-bottom: 20px;
 
   color: #fbbf24;
 
   font-size: 14px;
+
   line-height: 1.4;
 }
 
 #motor {
-  margin-top: 7px;
+  margin-top: 6px;
 
   color: #94a3b8;
 
@@ -175,6 +247,7 @@ canvas {
 </style>
 </head>
 
+
 <body>
 
 <div class="container">
@@ -182,7 +255,7 @@ canvas {
 <h1>Leitor de Código de Barras</h1>
 
 <div class="subtitulo">
-  Centralize o código dentro da área amarela
+  Selecione a melhor câmera traseira
 </div>
 
 
@@ -196,15 +269,65 @@ canvas {
   </video>
 
   <div class="mira">
+
     <div class="linha"></div>
+
+  </div>
+
+</div>
+
+
+<div class="painel-camera">
+
+  <label>
+    CÂMERA
+  </label>
+
+  <select id="cameraSelect">
+
+    <option value="">
+      Abra a câmera primeiro
+    </option>
+
+  </select>
+
+
+  <div
+    class="info-camera"
+    id="infoCamera">
+  </div>
+
+
+  <div
+    class="zoom-box"
+    id="zoomBox">
+
+    <label>
+      ZOOM
+    </label>
+
+    <div class="zoom-linha">
+
+      <input
+        type="range"
+        id="zoom">
+
+      <span id="zoomValor">
+        1x
+      </span>
+
+    </div>
+
   </div>
 
 </div>
 
 
 <div class="instrucao">
-  Mantenha todas as barras visíveis e deixe
-  a câmera focar antes de capturar.
+
+  Centralize todas as barras dentro
+  do retângulo amarelo.
+
 </div>
 
 
@@ -213,8 +336,12 @@ canvas {
 </button>
 
 
-<button id="btnCapturar" disabled>
+<button
+  id="btnCapturar"
+  disabled>
+
   CAPTURAR E LER
+
 </button>
 
 
@@ -236,7 +363,9 @@ canvas {
 
 
 <div id="mensagem">
+
   Abra a câmera para começar.
+
 </div>
 
 
@@ -259,6 +388,21 @@ const btnCamera =
 const btnCapturar =
   document.getElementById("btnCapturar");
 
+const cameraSelect =
+  document.getElementById("cameraSelect");
+
+const infoCamera =
+  document.getElementById("infoCamera");
+
+const zoomBox =
+  document.getElementById("zoomBox");
+
+const zoom =
+  document.getElementById("zoom");
+
+const zoomValor =
+  document.getElementById("zoomValor");
+
 const codigo =
   document.getElementById("codigo");
 
@@ -272,124 +416,116 @@ const motor =
   document.getElementById("motor");
 
 
-let stream = null;
-
 let detector = null;
 
-let leituraAutomatica = null;
+let stream = null;
+
+let track = null;
+
+let intervalo = null;
 
 let processando = false;
 
 let ultimoCodigo = "";
 
 
-// ==========================================
-// VERIFICAR BARCODE DETECTOR
-// ==========================================
+// =====================================
+// BARCODE DETECTOR
+// =====================================
 
 async function prepararDetector() {
 
   if (!("BarcodeDetector" in window)) {
 
-    motor.innerText =
-      "BarcodeDetector não disponível neste navegador.";
-
-    return false;
+    throw new Error(
+      "BarcodeDetector não disponível."
+    );
 
   }
 
 
-  try {
-
-    const suportados =
-      await BarcodeDetector.getSupportedFormats();
+  const suportados =
+    await BarcodeDetector.getSupportedFormats();
 
 
-    console.log(
-      "Formatos disponíveis:",
-      suportados
+  const desejados = [
+
+    "ean_13",
+    "ean_8",
+    "code_128",
+    "code_39",
+    "code_93",
+    "codabar",
+    "itf",
+    "upc_a",
+    "upc_e"
+
+  ];
+
+
+  const formatosValidos =
+    desejados.filter(
+      f => suportados.includes(f)
     );
 
 
-    const desejados = [
+  detector =
+    new BarcodeDetector({
 
-      "ean_13",
+      formats: formatosValidos
 
-      "ean_8",
-
-      "code_128",
-
-      "code_39",
-
-      "code_93",
-
-      "codabar",
-
-      "itf",
-
-      "upc_a",
-
-      "upc_e"
-
-    ];
+    });
 
 
-    const formatosValidos =
-      desejados.filter(
-        item => suportados.includes(item)
-      );
-
-
-    if (formatosValidos.length === 0) {
-
-      motor.innerText =
-        "Nenhum formato 1D compatível encontrado.";
-
-      return false;
-
-    }
-
-
-    detector =
-      new BarcodeDetector({
-
-        formats: formatosValidos
-
-      });
-
-
-    motor.innerText =
-      "Motor: leitor nativo do navegador";
-
-
-    return true;
-
-
-  } catch (erro) {
-
-    console.error(erro);
-
-    motor.innerText =
-      "Falha ao iniciar o leitor nativo.";
-
-    return false;
-
-  }
+  motor.innerText =
+    "Motor: leitor nativo do navegador";
 
 }
 
 
-// ==========================================
-// ABRIR CÂMERA
-// ==========================================
+// =====================================
+// PARAR CÂMERA
+// =====================================
+
+function pararCamera() {
+
+  if (intervalo) {
+
+    clearInterval(intervalo);
+
+    intervalo = null;
+
+  }
+
+
+  if (stream) {
+
+    stream
+      .getTracks()
+      .forEach(
+        t => t.stop()
+      );
+
+  }
+
+
+  stream = null;
+  track = null;
+
+}
+
+
+// =====================================
+// PRIMEIRA ABERTURA
+// =====================================
 
 btnCamera.addEventListener(
   "click",
-  abrirCamera
+  iniciar
 );
 
 
-async function abrirCamera() {
+async function iniciar() {
 
   btnCamera.disabled = true;
 
@@ -397,61 +533,110 @@ async function abrirCamera() {
     "ABRINDO CÂMERA...";
 
 
-  codigo.innerText =
-    "Procurando código...";
-
-
-  formato.innerText = "";
-
-
   mensagem.innerText =
-    "Solicitando câmera traseira...";
+    "Solicitando acesso à câmera...";
 
 
   try {
 
-    const detectorOk =
-      await prepararDetector();
+    await prepararDetector();
 
 
-    if (!detectorOk) {
+    /*
+      Primeiro abrimos qualquer câmera traseira.
+      Isso libera os nomes das câmeras para o navegador.
+    */
 
-      throw new Error(
-        "O navegador não disponibilizou o leitor de código necessário."
-      );
-
-    }
-
-
-    stream =
+    const temporaria =
       await navigator.mediaDevices.getUserMedia({
-
-        audio: false,
 
         video: {
 
           facingMode: {
             ideal: "environment"
-          },
-
-          width: {
-            ideal: 1920
-          },
-
-          height: {
-            ideal: 1080
           }
 
-        }
+        },
+
+        audio: false
 
       });
 
 
-    video.srcObject =
-      stream;
+    temporaria
+      .getTracks()
+      .forEach(
+        t => t.stop()
+      );
 
 
-    await video.play();
+    await carregarListaCameras();
+
+
+    const cameraSalva =
+      localStorage.getItem(
+        "cameraPreferida"
+      );
+
+
+    let cameraInicial = "";
+
+
+    if (
+      cameraSalva &&
+      Array.from(
+        cameraSelect.options
+      ).some(
+        option =>
+          option.value === cameraSalva
+      )
+    ) {
+
+      cameraInicial =
+        cameraSalva;
+
+    } else {
+
+      /*
+        Começamos pela primeira câmera
+        traseira encontrada.
+      */
+
+      const primeira =
+        Array.from(
+          cameraSelect.options
+        ).find(
+          option =>
+            option.value
+        );
+
+
+      if (primeira) {
+
+        cameraInicial =
+          primeira.value;
+
+      }
+
+    }
+
+
+    if (!cameraInicial) {
+
+      throw new Error(
+        "Nenhuma câmera encontrada."
+      );
+
+    }
+
+
+    cameraSelect.value =
+      cameraInicial;
+
+
+    await abrirCamera(
+      cameraInicial
+    );
 
 
     btnCamera.innerText =
@@ -460,13 +645,6 @@ async function abrirCamera() {
 
     btnCapturar.disabled =
       false;
-
-
-    mensagem.innerText =
-      "Leitura automática ativa. Aponte para o código.";
-
-
-    iniciarLeituraAutomatica();
 
 
   } catch (erro) {
@@ -482,10 +660,6 @@ async function abrirCamera() {
       "TENTAR NOVAMENTE";
 
 
-    codigo.innerText =
-      "Leitor não iniciado";
-
-
     mensagem.innerText =
       "Erro: " + erro.message;
 
@@ -494,29 +668,368 @@ async function abrirCamera() {
 }
 
 
-// ==========================================
-// LEITURA AUTOMÁTICA
-// ==========================================
+// =====================================
+// LISTAR CÂMERAS
+// =====================================
 
-function iniciarLeituraAutomatica() {
+async function carregarListaCameras() {
 
-  if (leituraAutomatica) {
+  const dispositivos =
+    await navigator.mediaDevices
+      .enumerateDevices();
 
-    clearInterval(
-      leituraAutomatica
+
+  const cameras =
+    dispositivos.filter(
+      d => d.kind === "videoinput"
+    );
+
+
+  cameraSelect.innerHTML = "";
+
+
+  cameras.forEach(
+    (camera, indice) => {
+
+      const option =
+        document.createElement(
+          "option"
+        );
+
+
+      option.value =
+        camera.deviceId;
+
+
+      option.textContent =
+        camera.label ||
+        "Câmera " + (indice + 1);
+
+
+      cameraSelect.appendChild(
+        option
+      );
+
+    }
+  );
+
+
+  if (cameras.length === 0) {
+
+    cameraSelect.innerHTML =
+      "<option>Nenhuma câmera encontrada</option>";
+
+  }
+
+}
+
+
+// =====================================
+// TROCAR CÂMERA
+// =====================================
+
+cameraSelect.addEventListener(
+  "change",
+  async function() {
+
+    const deviceId =
+      cameraSelect.value;
+
+
+    if (!deviceId) {
+      return;
+    }
+
+
+    mensagem.innerText =
+      "Trocando câmera...";
+
+
+    localStorage.setItem(
+      "cameraPreferida",
+      deviceId
+    );
+
+
+    await abrirCamera(
+      deviceId
+    );
+
+  }
+);
+
+
+// =====================================
+// ABRIR CÂMERA ESPECÍFICA
+// =====================================
+
+async function abrirCamera(
+  deviceId
+) {
+
+  pararCamera();
+
+
+  codigo.innerText =
+    "Procurando código...";
+
+
+  formato.innerText = "";
+
+
+  zoomBox.style.display =
+    "none";
+
+
+  stream =
+    await navigator.mediaDevices
+      .getUserMedia({
+
+        audio: false,
+
+        video: {
+
+          deviceId: {
+            exact: deviceId
+          },
+
+          width: {
+            ideal: 1920
+          },
+
+          height: {
+            ideal: 1080
+          }
+
+        }
+
+      });
+
+
+  video.srcObject =
+    stream;
+
+
+  await video.play();
+
+
+  track =
+    stream.getVideoTracks()[0];
+
+
+  configurarCamera();
+
+
+  mensagem.innerText =
+    "Câmera ativa. Procurando código...";
+
+
+  iniciarLeitura();
+
+}
+
+
+// =====================================
+// RECURSOS DA CÂMERA
+// =====================================
+
+async function configurarCamera() {
+
+  if (!track) {
+    return;
+  }
+
+
+  const settings =
+    track.getSettings();
+
+
+  let texto =
+    "Ativa: " +
+    (track.label || "Câmera");
+
+
+  if (
+    settings.width &&
+    settings.height
+  ) {
+
+    texto +=
+      "<br>Resolução: " +
+      settings.width +
+      " × " +
+      settings.height;
+
+  }
+
+
+  infoCamera.innerHTML =
+    texto;
+
+
+  let capacidades = {};
+
+
+  try {
+
+    capacidades =
+      track.getCapabilities();
+
+  } catch (erro) {
+
+    console.log(erro);
+
+  }
+
+
+  /*
+    Tentar foco contínuo
+  */
+
+  try {
+
+    if (
+      capacidades.focusMode &&
+      capacidades.focusMode.includes(
+        "continuous"
+      )
+    ) {
+
+      await track.applyConstraints({
+
+        advanced: [
+
+          {
+            focusMode: "continuous"
+          }
+
+        ]
+
+      });
+
+    }
+
+  } catch (erro) {
+
+    console.log(
+      "Foco contínuo não disponível."
     );
 
   }
 
 
-  leituraAutomatica =
+  /*
+    Configurar zoom
+  */
+
+  if (capacidades.zoom) {
+
+    zoom.min =
+      capacidades.zoom.min;
+
+    zoom.max =
+      capacidades.zoom.max;
+
+    zoom.step =
+      capacidades.zoom.step || 0.1;
+
+
+    const zoomAtual =
+      settings.zoom ||
+      capacidades.zoom.min;
+
+
+    zoom.value =
+      zoomAtual;
+
+
+    zoomValor.innerText =
+      Number(
+        zoomAtual
+      ).toFixed(1) + "x";
+
+
+    zoomBox.style.display =
+      "block";
+
+  }
+
+}
+
+
+// =====================================
+// ZOOM
+// =====================================
+
+zoom.addEventListener(
+  "input",
+  async function() {
+
+    if (!track) {
+      return;
+    }
+
+
+    const valor =
+      Number(
+        zoom.value
+      );
+
+
+    zoomValor.innerText =
+      valor.toFixed(1) + "x";
+
+
+    try {
+
+      await track.applyConstraints({
+
+        advanced: [
+
+          {
+            zoom: valor
+          }
+
+        ]
+
+      });
+
+    } catch (erro) {
+
+      console.log(
+        "Erro no zoom:",
+        erro
+      );
+
+    }
+
+  }
+);
+
+
+// =====================================
+// LEITURA AUTOMÁTICA
+// =====================================
+
+function iniciarLeitura() {
+
+  if (intervalo) {
+
+    clearInterval(
+      intervalo
+    );
+
+  }
+
+
+  intervalo =
     setInterval(
 
       async function() {
 
         if (
-          !detector ||
           processando ||
+          !detector ||
           video.readyState < 2
         ) {
 
@@ -531,7 +1044,9 @@ function iniciarLeituraAutomatica() {
         try {
 
           const resultados =
-            await detector.detect(video);
+            await detector.detect(
+              video
+            );
 
 
           if (
@@ -545,13 +1060,9 @@ function iniciarLeituraAutomatica() {
 
           }
 
-
         } catch (erro) {
 
-          console.log(
-            "Tentativa de leitura:",
-            erro
-          );
+          console.log(erro);
 
         }
 
@@ -560,31 +1071,33 @@ function iniciarLeituraAutomatica() {
 
       },
 
-      250
+      200
 
     );
 
 }
 
 
-// ==========================================
-// MOSTRAR RESULTADO
-// ==========================================
+// =====================================
+// RESULTADO
+// =====================================
 
-function mostrarResultado(item) {
+function mostrarResultado(
+  item
+) {
 
-  if (!item) {
+  if (
+    !item ||
+    !item.rawValue
+  ) {
+
     return;
+
   }
 
 
   const valor =
-    item.rawValue || "";
-
-
-  if (!valor) {
-    return;
-  }
+    item.rawValue;
 
 
   codigo.innerText =
@@ -625,25 +1138,22 @@ function mostrarResultado(item) {
 }
 
 
-// ==========================================
+// =====================================
 // CAPTURAR E LER
-// ==========================================
+// =====================================
 
 btnCapturar.addEventListener(
   "click",
-  capturarELer
+  capturar
 );
 
 
-async function capturarELer() {
+async function capturar() {
 
   if (
     !detector ||
     !video.videoWidth
   ) {
-
-    mensagem.innerText =
-      "A câmera ainda não está pronta.";
 
     return;
 
@@ -651,144 +1161,43 @@ async function capturarELer() {
 
 
   mensagem.innerText =
-    "Capturando imagem e analisando...";
+    "Capturando e analisando...";
 
 
-  btnCapturar.disabled =
-    true;
+  const largura =
+    video.videoWidth;
+
+  const altura =
+    video.videoHeight;
+
+
+  canvas.width =
+    largura;
+
+  canvas.height =
+    altura;
+
+
+  const ctx =
+    canvas.getContext(
+      "2d"
+    );
+
+
+  ctx.drawImage(
+    video,
+    0,
+    0,
+    largura,
+    altura
+  );
 
 
   try {
 
-    const largura =
-      video.videoWidth;
-
-    const altura =
-      video.videoHeight;
-
-
-    canvas.width =
-      largura;
-
-    canvas.height =
-      altura;
-
-
-    const ctx =
-      canvas.getContext(
-        "2d",
-        {
-          willReadFrequently: true
-        }
-      );
-
-
-    ctx.drawImage(
-      video,
-      0,
-      0,
-      largura,
-      altura
-    );
-
-
-    // PRIMEIRA TENTATIVA:
-    // imagem inteira
-
-    let resultados =
+    const resultados =
       await detector.detect(
         canvas
-      );
-
-
-    if (
-      resultados &&
-      resultados.length > 0
-    ) {
-
-      mostrarResultado(
-        resultados[0]
-      );
-
-
-      btnCapturar.disabled =
-        false;
-
-
-      return;
-
-    }
-
-
-    // SEGUNDA TENTATIVA:
-    // somente faixa central
-
-    const recorteLargura =
-      Math.floor(
-        largura * 0.95
-      );
-
-
-    const recorteAltura =
-      Math.floor(
-        altura * 0.45
-      );
-
-
-    const inicioX =
-      Math.floor(
-        (largura - recorteLargura) / 2
-      );
-
-
-    const inicioY =
-      Math.floor(
-        (altura - recorteAltura) / 2
-      );
-
-
-    const canvas2 =
-      document.createElement(
-        "canvas"
-      );
-
-
-    canvas2.width =
-      recorteLargura;
-
-
-    canvas2.height =
-      recorteAltura;
-
-
-    const ctx2 =
-      canvas2.getContext(
-        "2d"
-      );
-
-
-    ctx2.drawImage(
-
-      canvas,
-
-      inicioX,
-      inicioY,
-
-      recorteLargura,
-      recorteAltura,
-
-      0,
-      0,
-
-      recorteLargura,
-      recorteAltura
-
-    );
-
-
-    resultados =
-      await detector.detect(
-        canvas2
       );
 
 
@@ -811,25 +1220,17 @@ async function capturarELer() {
 
 
       mensagem.innerText =
-        "Nenhum código foi identificado nesta captura.";
+        "Nenhum código identificado nesta captura.";
 
     }
 
 
   } catch (erro) {
 
-    console.error(erro);
-
-
     mensagem.innerText =
-      "Erro durante a leitura: " +
-      erro.message;
+      "Erro: " + erro.message;
 
   }
-
-
-  btnCapturar.disabled =
-    false;
 
 }
 
