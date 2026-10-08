@@ -329,7 +329,7 @@ canvas {
 .container { padding: 10px 12px; }
 h1 { font-size: 19px; margin: 6px 0 3px; }
 .subtitulo { font-size: 12px; margin-bottom: 9px; }
-.camera-box { border-radius: 12px; }
+.camera-box { border-radius: 12px; height: 180px !important; position: relative; }
 .abrir-no-visor {
   position: absolute; z-index: 5; left: 50%; top: 50%;
   transform: translate(-50%, -50%); width: auto;
@@ -347,6 +347,22 @@ h1 { font-size: 19px; margin: 6px 0 3px; }
 #formato { font-size: 11px; margin-top: 3px; }
 #motor { font-size: 10px; }
 @media (max-width: 420px) { .camera-box { height: 175px; } .mira { height: 84px; } }
+
+.botao-trocar-camera {display:none;position:absolute;z-index:8;right:8px;bottom:8px;width:auto;padding:7px 10px;margin:0;border:1px solid #64748b;border-radius:8px;background:rgba(15,23,42,.9);color:white;font-size:12px}
+.painel-camera-overlay {position:absolute;z-index:9;bottom:43px;right:8px;left:8px;margin:0;padding:10px;background:rgba(30,41,59,.97);border:1px solid #64748b;box-shadow:0 4px 20px #0009}
+.painel-camera-overlay[hidden]{display:none!important}
+.painel-camera-overlay .info-camera{max-height:32px;overflow:hidden}
+#zoomBox{display:none!important}
+/* Visor sempre compacto e controles presos ao visor */
+.camera-box { height: 180px !important; position: relative !important; overflow: hidden !important; }
+#btnCamera.abrir-no-visor { position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%,-50%) !important; z-index: 7 !important; width: auto !important; margin: 0 !important; }
+#btnTrocarCamera { position: absolute !important; right: 7px !important; bottom: 7px !important; top: auto !important; left: auto !important; width: auto !important; margin: 0 !important; }
+#zoomBox { display: none !important; }
+/* Força o seletor a permanecer sobre o vídeo, nunca abaixo dele. */
+.camera-box > #painelCamera { position:absolute !important; inset:auto 8px 42px 8px !important; width:auto !important; z-index:15 !important; }
+.camera-box > #btnTrocarCamera { position:absolute !important; z-index:14 !important; }
+#zoomBox, #zoomBox * { visibility:hidden !important; }
+#zoomBox { display:none !important; height:0 !important; padding:0 !important; margin:0 !important; }
 </style>
 </head>
 
@@ -379,52 +395,13 @@ h1 { font-size: 19px; margin: 6px 0 3px; }
 
   </div>
 
-</div>
-
-
-<div class="painel-camera">
-
-  <label>
-    CÂMERA <span style="font-weight:normal">(trocar se necessário)</span>
-  </label>
-
-  <select id="cameraSelect">
-
-    <option value="">
-      Abra a câmera primeiro
-    </option>
-
-  </select>
-
-
-  <div
-    class="info-camera"
-    id="infoCamera">
+  <button type="button" id="btnTrocarCamera" class="botao-trocar-camera" aria-expanded="false">⚙ Câmera</button>
+  <div class="painel-camera painel-camera-overlay" id="painelCamera" hidden>
+    <label for="cameraSelect">ESCOLHER CÂMERA</label>
+    <select id="cameraSelect"><option value="">Abra a câmera primeiro</option></select>
+    <div class="info-camera" id="infoCamera"></div>
   </div>
-
-
-  <div
-    class="zoom-box"
-    id="zoomBox">
-
-    <label>
-      ZOOM
-    </label>
-
-    <div class="zoom-linha">
-
-      <input
-        type="range"
-        id="zoom">
-
-      <span id="zoomValor">
-        1x
-      </span>
-
-    </div>
-
-  </div>
-
+  <div class="zoom-box" id="zoomBox" hidden aria-hidden="true"><input type="range" id="zoom"><span id="zoomValor">1x</span></div>
 </div>
 
 
@@ -550,6 +527,18 @@ const btnCapturar =
 
 const cameraSelect =
   document.getElementById("cameraSelect");
+
+
+const btnTrocarCamera = document.getElementById("btnTrocarCamera");
+const painelCamera = document.getElementById("painelCamera");
+btnTrocarCamera.addEventListener("click", function() {
+  painelCamera.hidden = !painelCamera.hidden;
+  btnTrocarCamera.setAttribute("aria-expanded", String(!painelCamera.hidden));
+});
+cameraSelect.addEventListener("change", function() {
+  painelCamera.hidden = true;
+  btnTrocarCamera.setAttribute("aria-expanded", "false");
+});
 
 const infoCamera =
   document.getElementById("infoCamera");
@@ -1065,6 +1054,7 @@ async function iniciar() {
 
 
     btnCamera.style.display = "none";
+    btnTrocarCamera.style.display = "block";
 
 
     btnCapturar.disabled =
@@ -1081,6 +1071,7 @@ async function iniciar() {
 
 
     btnCamera.style.display = "block";
+    btnTrocarCamera.style.display = "none";
     btnCamera.innerText =
       "TENTAR NOVAMENTE";
 
@@ -1176,6 +1167,7 @@ cameraSelect.addEventListener(
     } catch (erro) {
       mensagem.innerText = "Não foi possível trocar a câmera: " + erro.message;
       btnCamera.style.display = "block";
+    btnTrocarCamera.style.display = "none";
       btnCamera.disabled = false;
       btnCamera.innerText = "TENTAR NOVAMENTE";
     }
