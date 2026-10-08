@@ -587,6 +587,34 @@ let intervalo = null;
 let processando = false;
 
 let ultimoCodigo = "";
+let leituraConfirmada = false;
+let candidatoAtual = "";
+let repeticoesCandidato = 0;
+let instanteCandidato = 0;
+const CONFIRMACOES_NECESSARIAS = 2;
+const TEMPO_CANDIDATO_MS = 1800;
+
+function normalizarVinLido(raw) {
+  const original = String(raw || "").trim().toUpperCase().replace(/\s+/g, "");
+  if (original.length !== 17 && original.length !== 18) return null;
+  const vin = original.slice(0, 17);
+  // Letras I, O e Q não são válidas no VIN; o caractere extra pode ser qualquer um.
+  if (!/^[A-HJ-NPR-Z0-9]{17}$/.test(vin)) return null;
+  return { original, vin };
+}
+
+function reiniciarLeitura() {
+  leituraConfirmada = false;
+  candidatoAtual = "";
+  repeticoesCandidato = 0;
+  instanteCandidato = 0;
+  processando = false;
+  ultimoCodigo = "";
+  codigo.innerText = "Procurando chassi...";
+  const original = document.getElementById("codigoOriginal");
+  if (original) original.textContent = "";
+  if (track && detector) iniciarLeitura();
+}
 
 
 // =====================================
@@ -757,8 +785,8 @@ function prepararNovoCadastro() {
   localizacaoCadastro.value = "";
   statusCadastro.textContent = "";
   statusCadastro.className = "status-info";
-  ultimoCodigo = "";
-  codigo.innerText = "Procurando código...";
+  reiniciarLeitura();
+  btnCapturar.textContent = "CAPTURAR E LER";
   formato.innerText = "";
   document.getElementById("codigoOriginal").textContent = "";
 }
@@ -1165,7 +1193,9 @@ async function abrirCamera(
 ) {
 
   pararCamera();
-
+  leituraConfirmada = false;
+  candidatoAtual = "";
+  repeticoesCandidato = 0;
 
   codigo.innerText =
     "Procurando código...";
@@ -1410,137 +1440,83 @@ zoom.addEventListener(
 // =====================================
 
 function iniciarLeitura() {
+  if (intervalo) clearInterval(intervalo);
+  if (leituraConfirmada) return;
 
-  if (intervalo) {
-
-    clearInterval(
-      intervalo
-    );
-
-  }
-
-
-  intervalo =
-    setInterval(
-
-      async function() {
-
-        if (
-          processando ||
-          !detector ||
-          video.readyState < 2
-        ) {
-
-          return;
-
-        }
-
-
-        processando = true;
-
-
-        try {
-
-          const resultados =
-            await detector.detect(
-              video
-            );
-
-
-          if (
-            resultados &&
-            resultados.length > 0
-          ) {
-
-            mostrarResultado(
-              resultados[0]
-            );
-
-          }
-
-        } catch (erro) {
-
-          console.log(erro);
-
-        }
-
-
-        processando = false;
-
-      },
-
-      200
-
-    );
-
-}
-
-
-// =====================================
-// RESULTADO
-// =====================================
-
-function mostrarResultado(
-  item
-) {
-
-  if (
-    !item ||
-    !item.rawValue
-  ) {
-
-    return;
-
-  }
-
-
-  const original = String(item.rawValue).trim().toUpperCase().replace(/\s+/g, "");
-  const valor = original.length === 12 ? original.slice(0, 11) : original;
-
-
-  codigo.innerText = valor;
-  document.getElementById("codigoOriginal").textContent =
-    original.length === 12 ? "Capturado: " + original + " • último caractere ignorado" : "";
-
-  // Envia automaticamente o código lido para o formulário de cadastro.
-  if (chassiCadastro) {
-    chassiCadastro.value = String(valor).trim().toUpperCase().replace(/\s+/g, "");
-  }
-
-
-  formato.innerText =
-    "Formato: " +
-    (item.format || "identificado");
-
-
-  mensagem.innerText =
-    "Código identificado com sucesso!";
-
-
-  if (
-    valor !== ultimoCodigo
-  ) {
-
-    ultimoCodigo =
-      valor;
-
-
-    if (
-      navigator.vibrate
-    ) {
-
-      navigator.vibrate([
-        100,
-        50,
-        100
-      ]);
-
+  intervalo = setInterval(async function() {
+    if (processando || leituraConfirmada || !detector || video.readyState < 2) return;
+    processando = true;
+    try {
+      const resultados = await detector.detect(video);
+      analisarResultados(resultados, false);
+    } catch (erro) {
+      console.log("Falha de leitura:", erro);
+    } finally {
+      processando = false;
     }
-
-  }
-
+  }, 200);
 }
 
+function analisarResultados(resultados, capturaManual) {
+  if (leituraConfirmada || !Array.isArray(resultados)) return false;
+  const candidatos = resultados
+    .map(item => ({ item, dados: normalizarVinLido(item.rawValue) }))
+    .filter(x => x.dados);
+
+  if (!candidatos.length) {
+    if (capturaManual) mensagem.innerText = "Nenhum chassi válido encontrado. Centralize as barras do chassi.";
+    return false;
+  }
+
+  // Prioriza a região central do quadro se o navegador informar coordenadas.
+  const centroX = video.videoWidth / 2;
+  const centroY = video.videoHeight / 2;
+  candidatos.sort((a, b) => {
+    const distancia = x => {
+      const r = x.item.boundingBox;
+      if (!r || !video.videoWidth) return 0;
+      return Math.hypot(r.x + r.width / 2 - centroX, r.y + r.height / 2 - centroY);
+    };
+    return distancia(a) - distancia(b);
+  });
+
+  const escolhido = candidatos[0];
+  const agora = Date.now();
+  if (escolhido.dados.vin === candidatoAtual && agora - instanteCandidato < TEMPO_CANDIDATO_MS) {
+    repeticoesCandidato++;
+  } else {
+    candidatoAtual = escolhido.dados.vin;
+    repeticoesCandidato = 1;
+  }
+  instanteCandidato = agora;
+
+  if (repeticoesCandidato >= CONFIRMACOES_NECESSARIAS) {
+    confirmarChassi(escolhido.item, escolhido.dados);
+    return true;
+  }
+  mensagem.innerText = "Chassi detectado. Mantenha a câmera firme para confirmar...";
+  return false;
+}
+
+function confirmarChassi(item, dados) {
+  if (leituraConfirmada) return;
+  leituraConfirmada = true;
+  if (intervalo) {
+    clearInterval(intervalo);
+    intervalo = null;
+  }
+  ultimoCodigo = dados.vin;
+  codigo.innerText = dados.vin;
+  const original = document.getElementById("codigoOriginal");
+  if (original) original.textContent = dados.original.length === 18
+    ? "Capturado: " + dados.original + " • último caractere ignorado" : "";
+  chassiCadastro.value = dados.vin;
+  formato.innerText = "Formato: " + (item.format || "identificado");
+  mensagem.innerText = "Chassi confirmado! Confira os 17 caracteres e complete o cadastro.";
+  btnCapturar.textContent = "LER OUTRO CHASSI";
+  btnCapturar.disabled = false;
+  if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
+}
 
 // =====================================
 // CAPTURAR E LER
@@ -1553,6 +1529,12 @@ btnCapturar.addEventListener(
 
 
 async function capturar() {
+  if (leituraConfirmada) {
+    btnCapturar.textContent = "CAPTURAR E LER";
+    reiniciarLeitura();
+    mensagem.innerText = "Procurando novo chassi...";
+    return;
+  }
 
   if (
     !detector ||
@@ -1605,26 +1587,11 @@ async function capturar() {
       );
 
 
-    if (
-      resultados &&
-      resultados.length > 0
-    ) {
-
-      mostrarResultado(
-        resultados[0]
-      );
-
+    if (resultados && resultados.length > 0) {
+      analisarResultados(resultados, true);
     } else {
 
-      codigo.innerText =
-        "Não identificado";
-
-
-      formato.innerText = "";
-
-
-      mensagem.innerText =
-        "Nenhum código identificado nesta captura.";
+      mensagem.innerText = "Nenhum código identificado nesta captura.";
 
     }
 
