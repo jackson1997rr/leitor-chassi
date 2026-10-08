@@ -43,7 +43,7 @@ h1 {
 .camera-box {
   position: relative;
   width: 100%;
-  height: 390px;
+  height: 180px;
   overflow: hidden;
   border-radius: 16px;
   background: black;
@@ -62,7 +62,7 @@ video {
   right: 5%;
   top: 50%;
   transform: translateY(-50%);
-  height: 150px;
+  height: 90px;
 
   border: 3px solid #f59e0b;
   border-radius: 10px;
@@ -85,8 +85,8 @@ video {
 }
 
 .painel-camera {
-  margin-top: 15px;
-  padding: 15px;
+  margin-top: 8px;
+  padding: 8px 10px;
 
   background: #1e293b;
 
@@ -153,9 +153,9 @@ select {
 .instrucao {
   color: #cbd5e1;
 
-  margin: 15px 0;
+  margin: 7px 0;
 
-  font-size: 14px;
+  font-size: 12px;
 
   line-height: 1.4;
 }
@@ -189,9 +189,9 @@ button {
 }
 
 .resultado {
-  margin-top: 18px;
+  margin-top: 8px;
 
-  padding: 20px;
+  padding: 10px;
 
   background: #1e293b;
 
@@ -205,11 +205,11 @@ button {
 }
 
 #codigo {
-  margin-top: 8px;
+  margin-top: 4px;
 
   color: #22c55e;
 
-  font-size: 24px;
+  font-size: 20px;
   font-weight: bold;
 
   word-break: break-all;
@@ -222,9 +222,9 @@ button {
 }
 
 #mensagem {
-  margin-top: 15px;
+  margin-top: 8px;
 
-  padding-bottom: 20px;
+  padding-bottom: 8px;
 
   color: #fbbf24;
 
@@ -325,6 +325,28 @@ canvas {
 .status-erro { color: #f87171; }
 .status-info { color: #fbbf24; }
 
+/* Layout compacto para leitura no celular */
+.container { padding: 10px 12px; }
+h1 { font-size: 19px; margin: 6px 0 3px; }
+.subtitulo { font-size: 12px; margin-bottom: 9px; }
+.camera-box { border-radius: 12px; }
+.abrir-no-visor {
+  position: absolute; z-index: 5; left: 50%; top: 50%;
+  transform: translate(-50%, -50%); width: auto;
+  min-width: 160px; margin: 0; padding: 12px 16px;
+  background: #2563eb; font-size: 14px;
+  box-shadow: 0 4px 16px #0009;
+}
+.painel-camera label { margin-bottom: 4px; font-size: 11px; }
+.painel-camera select { padding: 8px; font-size: 13px; }
+.info-camera { font-size: 11px; margin-top: 5px; }
+.zoom-box { margin-top: 7px; }
+#btnCapturar { padding: 10px; margin-top: 8px; font-size: 13px; }
+.resultado .label { font-size: 11px; }
+.codigo-original { color: #94a3b8; font-size: 11px; margin-top: 3px; overflow-wrap: anywhere; }
+#formato { font-size: 11px; margin-top: 3px; }
+#motor { font-size: 10px; }
+@media (max-width: 420px) { .camera-box { height: 175px; } .mira { height: 84px; } }
 </style>
 </head>
 
@@ -336,7 +358,7 @@ canvas {
 <h1>Leitor de Código de Barras</h1>
 
 <div class="subtitulo">
-  Selecione a melhor câmera traseira
+  Aponte a câmera para o código de barras
 </div>
 
 
@@ -348,6 +370,8 @@ canvas {
     muted
     playsinline>
   </video>
+
+  <button type="button" id="btnCamera" class="abrir-no-visor">ABRIR CÂMERA</button>
 
   <div class="mira">
 
@@ -361,7 +385,7 @@ canvas {
 <div class="painel-camera">
 
   <label>
-    CÂMERA
+    CÂMERA <span style="font-weight:normal">(trocar se necessário)</span>
   </label>
 
   <select id="cameraSelect">
@@ -412,19 +436,6 @@ canvas {
 </div>
 
 
-<button id="btnCamera">
-  ABRIR CÂMERA
-</button>
-
-
-<button
-  id="btnCapturar"
-  disabled>
-
-  CAPTURAR E LER
-
-</button>
-
 
 <div class="resultado">
 
@@ -436,11 +447,22 @@ canvas {
     Aguardando...
   </div>
 
+  <div id="codigoOriginal" class="codigo-original"></div>
+
   <div id="formato"></div>
 
   <div id="motor"></div>
 
 </div>
+
+
+<button
+  id="btnCapturar"
+  disabled>
+
+  CAPTURAR E LER
+
+</button>
 
 
 <div id="mensagem">
@@ -738,6 +760,7 @@ function prepararNovoCadastro() {
   ultimoCodigo = "";
   codigo.innerText = "Procurando código...";
   formato.innerText = "";
+  document.getElementById("codigoOriginal").textContent = "";
 }
 
 btnNovo.addEventListener("click", prepararNovoCadastro);
@@ -1009,13 +1032,11 @@ async function iniciar() {
       cameraInicial;
 
 
-    await abrirCamera(
-      cameraInicial
-    );
+    await abrirCamera(cameraInicial);
+    localStorage.setItem("cameraPreferida", cameraInicial);
 
 
-    btnCamera.innerText =
-      "CÂMERA ATIVA";
+    btnCamera.style.display = "none";
 
 
     btnCapturar.disabled =
@@ -1031,6 +1052,7 @@ async function iniciar() {
       false;
 
 
+    btnCamera.style.display = "block";
     btnCamera.innerText =
       "TENTAR NOVAMENTE";
 
@@ -1120,15 +1142,15 @@ cameraSelect.addEventListener(
       "Trocando câmera...";
 
 
-    localStorage.setItem(
-      "cameraPreferida",
-      deviceId
-    );
-
-
-    await abrirCamera(
-      deviceId
-    );
+    try {
+      await abrirCamera(deviceId);
+      localStorage.setItem("cameraPreferida", deviceId);
+    } catch (erro) {
+      mensagem.innerText = "Não foi possível trocar a câmera: " + erro.message;
+      btnCamera.style.display = "block";
+      btnCamera.disabled = false;
+      btnCamera.innerText = "TENTAR NOVAMENTE";
+    }
 
   }
 );
@@ -1195,6 +1217,7 @@ async function abrirCamera(
   configurarCamera();
 
 
+  btnCamera.style.display = "none";
   mensagem.innerText =
     "Câmera ativa. Procurando código...";
 
@@ -1471,12 +1494,13 @@ function mostrarResultado(
   }
 
 
-  const valor =
-    item.rawValue;
+  const original = String(item.rawValue).trim().toUpperCase().replace(/\s+/g, "");
+  const valor = original.length === 12 ? original.slice(0, 11) : original;
 
 
-  codigo.innerText =
-    valor;
+  codigo.innerText = valor;
+  document.getElementById("codigoOriginal").textContent =
+    original.length === 12 ? "Capturado: " + original + " • último caractere ignorado" : "";
 
   // Envia automaticamente o código lido para o formulário de cadastro.
   if (chassiCadastro) {
